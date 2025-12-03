@@ -24,11 +24,10 @@ export default function AdminPage() {
       setLoading(true);
       setErrorMsg('');
 
-      // Vérifier l’utilisateur connecté
       const {
         data: { user },
         error: userError,
-      } = await supabase.auth.getUser(); // [web:624]
+      } = await supabase.auth.getUser();
 
       if (userError || !user) {
         setLoading(false);
@@ -44,7 +43,6 @@ export default function AdminPage() {
 
       setIsAdmin(true);
 
-      // Charger quelques stats simples
       try {
         const [
           { count: profilesCount, error: profErr },
@@ -62,7 +60,7 @@ export default function AdminPage() {
             .select('id, display_name, city, gender, main_intent, created_at')
             .order('created_at', { ascending: false })
             .limit(10),
-        ]); // [web:317]
+        ]);
 
         if (profErr || convErr || latestErr) {
           setErrorMsg(
@@ -120,11 +118,12 @@ export default function AdminPage() {
         ← Retour à l’app
       </button>
 
-      <h1 style={{ marginBottom: 6 }}>Admin CupidWave</h1>
+      <h1 style={{ marginBottom: 6 }}>Admin ManyLovr</h1>
       <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16 }}>
         Cet espace est visible uniquement pour le compte {ADMIN_EMAIL}. De
         nouvelles fonctionnalités (modération, statistiques détaillées, gestion
-        des groupes) seront ajoutées ici plus tard.
+        des groupes et des rencontres à plusieurs) seront ajoutées ici plus
+        tard.
       </p>
 
       {errorMsg && (

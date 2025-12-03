@@ -1,19 +1,23 @@
+// app/layout.js
 import './globals.css';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import MainNav from './_components/MainNav';
 
 export const metadata = {
-  title: 'CupidWave',
-  description: 'CupidWave — rencontres proches, simples et assumées.',
+  title: {
+    template: '%s | ManyLovr',
+    default: 'ManyLovr',
+  },
+  description:
+    "ManyLovr est une app de rencontres pensée pour les connexions à plusieurs, les groupes affinitaires et les rencontres qualitatives.",
+  metadataBase: new URL('https://manylovr.com'),
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body>
-        <Header />
-        <div style={{ minHeight: 'calc(100vh - 120px)' }}>{children}</div>
-        <Footer />
+        <MainNav />
+        <main>{children}</main>
       </body>
     </html>
   );

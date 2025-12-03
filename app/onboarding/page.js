@@ -36,7 +36,6 @@ export default function OnboardingPage() {
       setErrorMsg('');
       setInfoMsg('');
 
-      // 1) Récupérer l’utilisateur connecté (id + email) [web:624]
       const {
         data: { user },
         error: userError,
@@ -51,7 +50,6 @@ export default function OnboardingPage() {
       setUserId(user.id);
       setUserEmail(user.email || null);
 
-      // 2) Tenter de charger un profil existant [web:317]
       const { data: prof, error: profErr } = await supabase
         .from('profiles')
         .select(
@@ -67,7 +65,6 @@ export default function OnboardingPage() {
       }
 
       if (prof) {
-        // Profil existant
         setProfileId(prof.id);
         setDisplayName(prof.display_name || '');
         setCity(prof.city || '');
@@ -79,7 +76,6 @@ export default function OnboardingPage() {
         if (prof.main_photo_url) {
           setMainPhotoUrl(prof.main_photo_url);
         } else {
-          // Pas encore de photo : avatar aléatoire
           const randomAvatar = getRandomCupidAvatarPath();
           setMainPhotoUrl(randomAvatar);
 
@@ -89,7 +85,6 @@ export default function OnboardingPage() {
             .eq('id', prof.id);
         }
       } else {
-        // 3) Aucun profil : création d’un profil minimal avec avatar aléatoire
         const randomAvatar = getRandomCupidAvatarPath();
         setMainPhotoUrl(randomAvatar);
 
@@ -137,7 +132,7 @@ export default function OnboardingPage() {
       .from('profiles')
       .upsert(payload)
       .select('id')
-      .maybeSingle(); // upsert propre du profil [web:317]
+      .maybeSingle();
 
     setSaving(false);
 
@@ -149,7 +144,7 @@ export default function OnboardingPage() {
     if (data?.id) {
       setProfileId(data.id);
     }
-    setInfoMsg('Profil enregistré. Tu peux maintenant profiter de CupidWave.');
+    setInfoMsg('Profil enregistré. Tu peux maintenant profiter de ManyLovr.');
   }
 
   if (loading) {
@@ -212,9 +207,10 @@ export default function OnboardingPage() {
       <div className="card">
         <h1 style={{ marginBottom: 6 }}>Mon profil</h1>
         <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
-          À la création du compte, un avatar CupidWave est choisi au hasard pour
+          À la création du compte, un avatar ManyLovr est choisi au hasard pour
           représenter ton profil. Tu peux ensuite le remplacer par ta propre
-          photo et enrichir ton profil pour améliorer le matchmaking.
+          photo et enrichir ton profil pour améliorer le matchmaking et les
+          rencontres à plusieurs.
         </p>
 
         <ProfileForm

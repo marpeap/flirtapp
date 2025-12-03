@@ -18,7 +18,6 @@ export default function ProfilePhotoUploader({ userId, mainPhotoUrl, onPhotoChan
       const ext = file.name.split('.').pop();
       const path = `${userId}/${Date.now()}.${ext}`;
 
-      // Upload dans le bucket "profile-photos" (doit exister et être public) [web:635][web:645]
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
         .upload(path, file, {
@@ -32,7 +31,6 @@ export default function ProfilePhotoUploader({ userId, mainPhotoUrl, onPhotoChan
         return;
       }
 
-      // Récupérer l’URL publique de l’image [web:634][web:641]
       const { data } = supabase.storage.from('profile-photos').getPublicUrl(path);
       const publicUrl = data?.publicUrl;
 
@@ -100,7 +98,7 @@ export default function ProfilePhotoUploader({ userId, mainPhotoUrl, onPhotoChan
             disabled={uploading}
           />
           <span style={{ fontSize: 11, color: '#9ca3af' }}>
-            L’image sera stockée de manière sécurisée dans CupidWave.
+            L’image sera stockée de manière sécurisée dans ManyLovr.
           </span>
         </label>
       </div>

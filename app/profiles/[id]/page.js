@@ -16,7 +16,7 @@ const REACTION_LEVELS = [
 
 function getIcebreakersForProfile(p) {
   const generic = [
-    "Qu’est-ce qui t’a donné envie de t’inscrire sur CupidWave ?",
+    "Qu’est-ce qui t’a donné envie de t’inscrire sur ManyLovr ?",
     "C’est quoi pour toi une rencontre réussie ?",
   ];
 
@@ -71,11 +71,18 @@ export default function ProfileDetailPage() {
   const [blockLoading, setBlockLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
 
+  // Chargement profil + blocages + réaction
   useEffect(() => {
     async function loadAll() {
+      if (!profileId) return;
+
       setLoading(true);
       setErrorMsg('');
+      setIsBlocked(false);
+      setBlockInfo('');
+      setContactError('');
 
+      // 1) Utilisateur connecté
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         setLoading(false);
@@ -86,6 +93,7 @@ export default function ProfileDetailPage() {
       const userId = userData.user.id;
       setCurrentUserId(userId);
 
+      // 2) Profil affiché
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(
@@ -102,12 +110,15 @@ export default function ProfileDetailPage() {
 
       setProfile(profileData);
 
+      // 3) Vérifier s’il existe un blocage entre CES DEUX comptes (et pas d’autres)
+      // Utilise .or() avec la syntaxe PostgREST pour ne matcher que :
+      // (blocker_id = userId AND blocked_id = profileUserId)
+      // OU (blocker_id = profileUserId AND blocked_id = userId) [web:970][web:977]
       const { data: blockRows, error: blockError } = await supabase
         .from('blocks')
         .select('blocker_id, blocked_id')
-        .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`)
         .or(
-          `blocked_id.eq.${profileData.user_id},blocker_id.eq.${profileData.user_id}`
+          `and(blocker_id.eq.${userId},blocked_id.eq.${profileData.user_id}),and(blocker_id.eq.${profileData.user_id},blocked_id.eq.${userId})`
         );
 
       if (!blockError && blockRows && blockRows.length > 0) {
@@ -117,15 +128,16 @@ export default function ProfileDetailPage() {
         );
         if (someoneBlockedMe) {
           setBlockInfo(
-            'Cette personne t’a bloqué. Vous ne pouvez plus interagir sur CupidWave.'
+            'Cette personne t’a bloqué. Vous ne pouvez plus interagir sur ManyLovr.'
           );
         } else {
           setBlockInfo(
-            'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur CupidWave.'
+            'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur ManyLovr.'
           );
         }
       }
 
+      // 4) Réaction existante si ce n’est pas mon propre profil
       if (profileData.user_id !== userId) {
         const { data: reaction, error: reactionError } = await supabase
           .from('reactions')
@@ -142,9 +154,7 @@ export default function ProfileDetailPage() {
       setLoading(false);
     }
 
-    if (profileId) {
-      loadAll();
-    }
+    loadAll();
   }, [profileId, router]);
 
   async function handleContactClick() {
@@ -153,6 +163,7 @@ export default function ProfileDetailPage() {
     setContactError('');
     setContactLoading(true);
 
+    // Vérifie encore qu’on est bien connecté
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
       setContactLoading(false);
@@ -169,12 +180,12 @@ export default function ProfileDetailPage() {
       return;
     }
 
+    // Re-vérifie le blocage uniquement ENTRE ces deux comptes [web:970][web:977]
     const { data: blockRows, error: blockError } = await supabase
       .from('blocks')
-      .select('id')
-      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`)
+      .select('blocker_id, blocked_id')
       .or(
-        `blocker_id.eq.${otherUserId},blocked_id.eq.${otherUserId}`
+        `and(blocker_id.eq.${userId},blocked_id.eq.${otherUserId}),and(blocker_id.eq.${otherUserId},blocked_id.eq.${userId})`
       );
 
     if (!blockError && blockRows && blockRows.length > 0) {
@@ -186,6 +197,7 @@ export default function ProfileDetailPage() {
       return;
     }
 
+    // Cherche une conversation existante dans les deux sens
     let { data: conv1, error: convError1 } = await supabase
       .from('conversations')
       .select('id')
@@ -204,6 +216,7 @@ export default function ProfileDetailPage() {
 
     let conversationId = conv1?.id;
 
+    // Si pas de conversation, on en crée une
     if (!conversationId && !convError1) {
       const { data: newConv, error: insertError } = await supabase
         .from('conversations')
@@ -282,7 +295,7 @@ export default function ProfileDetailPage() {
     } else {
       setIsBlocked(true);
       setBlockInfo(
-        'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur CupidWave.'
+        'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur ManyLovr.'
       );
     }
   }
@@ -340,8 +353,24 @@ export default function ProfileDetailPage() {
   const isOwnProfile = currentUserId === profile.user_id;
 
   return (
-    <main>
-      <button onClick={() => router.push('/profiles')}>← Retour</button>
+    <main
+      style={{
+        maxWidth: 960,
+        margin: '0 auto',
+        padding: '16px 12px 40px',
+      }}
+    >
+      <button
+        onClick={() => router.push('/profiles')}
+        style={{
+          fontSize: 13,
+          padding: '4px 10px',
+          backgroundImage: 'linear-gradient(135deg,#4b5563,#020617)',
+          color: '#e5e7eb',
+        }}
+      >
+        ← Retour
+      </button>
 
       <div
         className="card"

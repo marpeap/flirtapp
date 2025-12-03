@@ -33,7 +33,6 @@ export default function MatchmakingQuestionnaire({ userId }) {
   }, [userId]);
 
   async function loadAll() {
-    // Charger réponses + photo actuelle du profil [web:624][web:317]
     const [{ data: ansData }, { data: profData }] = await Promise.all([
       supabase
         .from('matchmaking_answers')
@@ -85,7 +84,7 @@ export default function MatchmakingQuestionnaire({ userId }) {
           answers,
         },
         { onConflict: 'user_id' }
-      ); // stockage JSON des réponses matchmaking [web:629]
+      );
 
     setLoading(false);
 
@@ -93,7 +92,7 @@ export default function MatchmakingQuestionnaire({ userId }) {
       setStatus(error.message);
     } else {
       setStatus(
-        'Tes réponses matchmaking ont été enregistrées. Elles serviront à améliorer les suggestions de groupes.'
+        'Tes réponses matchmaking ont été enregistrées. Elles serviront à améliorer les suggestions de rencontres à plusieurs.'
       );
       setOpen(false);
     }
@@ -112,7 +111,7 @@ export default function MatchmakingQuestionnaire({ userId }) {
 
     if (error) {
       setPhotoError(
-        "La photo a été téléversée, mais une erreur est survenue lors de la mise à jour du profil."
+        'La photo a été téléversée, mais une erreur est survenue lors de la mise à jour du profil.'
       );
     }
   }
@@ -188,9 +187,10 @@ export default function MatchmakingQuestionnaire({ userId }) {
                 marginBottom: 10,
               }}
             >
-              Ajuste ta photo et réponds à ces questions pour que CupidWave
-              comprenne mieux ton style de rencontres, ton rapport au one‑shot,
-              à la sécurité, à l’hygiène et à ton mode de vie.
+              Ajuste ta photo et réponds à ces questions pour que ManyLovr
+              comprenne mieux ton style de rencontres, notamment à plusieurs,
+              ton rapport au one‑shot, à la sécurité, à l’hygiène et à ton mode
+              de vie.
             </p>
 
             {/* Photo tout en haut */}
@@ -351,7 +351,7 @@ export default function MatchmakingQuestionnaire({ userId }) {
                 >
                   <label>
                     4. À quelle fréquence idéale imagines‑tu les rencontres
-                    physiques ?
+                    physiques (solo ou à plusieurs) ?
                     <select
                       value={answers.q4_frequence}
                       onChange={(e) =>
