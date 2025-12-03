@@ -19,21 +19,35 @@ export default function MainNav() {
   const [userEmail, setUserEmail] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Récupérer l'utilisateur connecté pour savoir si on affiche Déconnexion ou Connexion [web:624]
   useEffect(() => {
+    let mounted = true;
+
     async function loadUser() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser(); // lecture initiale [web:965]
+      if (!mounted) return;
       setUserEmail(user?.email ?? null);
     }
 
     loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      setUserEmail(session?.user?.email ?? null);
+    }); // se met à jour à chaque login/logout [web:959]
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function handleLogout() {
     setSigningOut(true);
-    await supabase.auth.signOut(); // supprime la session côté client [web:956][web:962]
+    await supabase.auth.signOut(); // [web:962]
     setSigningOut(false);
     setUserEmail(null);
     router.push('/login');
@@ -62,7 +76,7 @@ export default function MainNav() {
           flexWrap: 'wrap',
         }}
       >
-        {/* Logo / nom */}
+        {/* Logo */}
         <Link
           href="/"
           style={{
@@ -89,7 +103,6 @@ export default function MainNav() {
           <span>ManyLovr</span>
         </Link>
 
-        {/* Liens + zone utilisateur */}
         <div
           style={{
             display: 'flex',
@@ -98,7 +111,6 @@ export default function MainNav() {
             flexWrap: 'wrap',
           }}
         >
-          {/* Liens principaux */}
           {links.map((link) => {
             const active =
               pathname === link.href ||
@@ -122,7 +134,6 @@ export default function MainNav() {
             );
           })}
 
-          {/* Espace utilisateur : email + bouton déconnexion ou lien connexion */}
           {userEmail ? (
             <div
               style={{

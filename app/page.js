@@ -1,302 +1,329 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '../lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [user, setUser] = useState(null);
-  const [displayName, setDisplayName] = useState('');
+  const router = useRouter();
 
-  useEffect(() => {
-    async function loadUser() {
-      const { data, error } = await supabase.auth.getUser();
-      if (!error && data?.user) {
-        setUser(data.user);
-
-        // récup pseudo si profil existe
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
-
-        if (profile?.display_name) {
-          setDisplayName(profile.display_name);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoadingUser(false);
-    }
-    loadUser();
-  }, []);
-
-  if (loadingUser) {
-    return <main>Chargement…</main>;
-  }
-
-  const isLoggedIn = !!user;
-
-  if (!isLoggedIn) {
-    // --- Version visiteur / non connecté ---
-    return (
-      <main>
+  return (
+    <main
+      style={{
+        minHeight: 'calc(100vh - 56px)',
+        backgroundImage:
+          'radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 16px 48px',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1040,
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)',
+          gap: 32,
+        }}
+      >
+        {/* Bloc texte (gauche) */}
         <section
           style={{
-            padding: '32px 20px',
-            borderRadius: 16,
+            padding: 24,
+            borderRadius: 24,
+            border: '1px solid rgba(148,163,184,0.35)',
             background:
-              'radial-gradient(circle at top, rgba(248,113,113,0.22), rgba(15,23,42,1))',
-            border: '1px solid #1f2937',
-            marginBottom: 32,
+              'linear-gradient(135deg,rgba(15,23,42,0.94),rgba(15,23,42,0.7))',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(18px)',
           }}
         >
           <p
             style={{
               fontSize: 12,
-              letterSpacing: 1.2,
+              letterSpacing: 0.18,
               textTransform: 'uppercase',
-              color: '#fecaca',
+              color: '#9ca3af',
+              marginBottom: 10,
             }}
           >
-            CupidWave — Bêta
-          </p>
-          <h1 style={{ fontSize: 28, marginTop: 8, marginBottom: 12 }}>
-            Rencontres charnelles et bienveillantes
-          </h1>
-          <p style={{ maxWidth: 520, color: '#fee2e2', marginBottom: 20 }}>
-            Un petit espace discret pour des rencontres amicales, coquines ou
-            les deux, sans algorithme opaque ni défilement infini. Tu choisis ta
-            vibe, ton rayon, et tu vois qui est vraiment proche.
+            Rencontres à plusieurs • vibes choisies
           </p>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/signup">
-              <button>Créer mon compte</button>
-            </Link>
-            <Link href="/login" style={{ fontSize: 14, color: '#fda4af' }}>
-              J’ai déjà un compte
-            </Link>
-          </div>
-        </section>
-
-        <section
-          style={{
-            marginBottom: 28,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-            gap: 24,
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: 18, marginBottom: 10 }}>
-              Pourquoi CupidWave existe
-            </h2>
-            <p style={{ color: '#e5e7eb', marginBottom: 10, fontSize: 14 }}>
-              Les grosses apps demandent 100 écrans, te poussent des abonnements
-              et te noient dans les profils. Ici, l’idée est de faire simple :
-              quelques infos utiles, des vrais messages, et basta.
-            </p>
-            <p style={{ color: '#e5e7eb', fontSize: 14 }}>
-              Tu remplis ton profil en 2 minutes, tu choisis qui tu cherches,
-              ton rayon, et tu laisses les rencontres se faire à ton rythme.
-            </p>
-          </div>
-
-          <ul style={{ listStyle: 'none', padding: 0, fontSize: 14 }}>
-            <li
-              style={{
-                padding: 10,
-                borderRadius: 10,
-                border: '1px solid #1f2937',
-                marginBottom: 8,
-                backgroundColor: '#020617',
-              }}
-            >
-              <strong>Simple.</strong> Un seul questionnaire, quelques filtres,
-              pas de feed infini.
-            </li>
-            <li
-              style={{
-                padding: 10,
-                borderRadius: 10,
-                border: '1px solid #1f2937',
-                marginBottom: 8,
-                backgroundColor: '#020617',
-              }}
-            >
-              <strong>Charnel mais respectueux.</strong> Tu choisis ce que tu
-              montres et ce que tu racontes, sans jugement.
-            </li>
-            <li
-              style={{
-                padding: 10,
-                borderRadius: 10,
-                border: '1px solid #1f2937',
-                backgroundColor: '#020617',
-              }}
-            >
-              <strong>Proche de toi.</strong> Les profils sont triés par
-              proximité et par attentes mutuelles.
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 style={{ fontSize: 18, marginBottom: 10 }}>Comment ça marche ?</h2>
-          <ol
+          <h1
             style={{
-              listStyle: 'decimal',
-              paddingLeft: 20,
-              color: '#fef9c3',
-              fontSize: 14,
-              lineHeight: 1.5,
+              fontSize: 32,
+              lineHeight: 1.1,
+              marginBottom: 12,
             }}
           >
-            <li style={{ marginBottom: 6 }}>
-              Tu crées un compte puis ton profil : pseudo, vibe, ce que tu
-              cherches et photo.
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              Tu choisis ton rayon et ton type de rencontres, CupidWave te
-              montre les profils compatibles proches de toi.
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              Tu envoies un like ou un message privé et vous voyez si le
-              courant passe.
-            </li>
-          </ol>
-        </section>
-      </main>
-    );
-  }
+            Rencontres qui respectent
+            <br />
+            ton rythme et tes limites.
+          </h1>
 
-  // --- Version membre connecté ---
-  const friendlyName =
-    displayName || user.email?.split('@')[0] || 'toi';
+          <p
+            style={{
+              fontSize: 14,
+              color: '#9ca3af',
+              maxWidth: 460,
+              marginBottom: 18,
+            }}
+          >
+            ManyLovr t’aide à créer des connexions en solo ou à plusieurs,
+            sans spam ni swipe infini. Tu poses ton cadre, tes envies, tes
+            groupes ; on s’occupe de te présenter les bonnes personnes.
+          </p>
 
-  return (
-    <main>
-      <section
-        style={{
-          padding: '28px 20px',
-          borderRadius: 16,
-          background:
-            'radial-gradient(circle at top, rgba(250,204,21,0.25), rgba(15,23,42,1))',
-          border: '1px solid #1f2937',
-          marginBottom: 28,
-        }}
-      >
-        <p
-          style={{
-            fontSize: 12,
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            color: '#fef3c7',
-          }}
-        >
-          Bonjour {friendlyName}
-        </p>
-        <h1 style={{ fontSize: 26, marginTop: 8, marginBottom: 10 }}>
-          Prêt·e pour de nouvelles ondes ?
-        </h1>
-        <p style={{ maxWidth: 540, color: '#e5e7eb', marginBottom: 18 }}>
-          Tu es connecté·e à CupidWave. Tu peux explorer les profils proches,
-          lancer un Tornado, envoyer un Push Éclair ou reprendre tes messages
-          là où tu les as laissés.
-        </p>
-
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 10,
-            marginBottom: 4,
-          }}
-        >
-          <Link href="/profiles">
-            <button>Voir les profils proches</button>
-          </Link>
-          <Link href="/matches">
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              flexWrap: 'wrap',
+              marginBottom: 16,
+            }}
+          >
             <button
+              type="button"
+              onClick={() => router.push('/onboarding')}
               style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
                 backgroundImage:
-                  'linear-gradient(135deg, #38bdf8, #4f46e5)',
+                  'linear-gradient(135deg,#f97316,#fb7185)',
+                color: '#0b1120',
+                fontSize: 14,
+                fontWeight: 600,
               }}
             >
-              Matchs suggérés
+              Créer mon profil
             </button>
-          </Link>
-          <Link href="/messages" style={{ fontSize: 14, color: '#fda4af' }}>
-            Aller à mes messages
-          </Link>
-        </div>
 
-        <p style={{ fontSize: 12, color: '#9ca3af' }}>
-          Tu peux aussi ajuster ton profil et ta confidentialité dans “Mon
-          profil” et “Compte”.
-        </p>
-      </section>
+            <button
+              type="button"
+              onClick={() => router.push('/profiles')}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: '1px solid rgba(148,163,184,0.5)',
+                backgroundColor: 'rgba(15,23,42,0.6)',
+                color: '#e5e7eb',
+                fontSize: 14,
+              }}
+            >
+              Voir les profils
+            </button>
+          </div>
 
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-          gap: 20,
-        }}
-      >
-        <div className="card" style={{ padding: 14 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 6 }}>Raccourcis utiles</h2>
           <ul
             style={{
               listStyle: 'none',
               padding: 0,
-              fontSize: 14,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
+              margin: 0,
+              display: 'grid',
+              gap: 8,
+              fontSize: 12,
+              color: '#9ca3af',
             }}
           >
-            <li>
-              <Link href="/onboarding" style={{ color: '#fda4af' }}>
-                Mettre à jour mon profil
-              </Link>{' '}
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>
-                (photo, intentions, qui tu cherches)
-              </span>
-            </li>
-            <li>
-              <Link href="/profiles" style={{ color: '#fda4af' }}>
-                Lancer un Tornado ou un Push Éclair
-              </Link>{' '}
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>
-                depuis la page Profils
-              </span>
-            </li>
-            <li>
-              <Link href="/account" style={{ color: '#fda4af' }}>
-                Gérer mes données et ma confidentialité
-              </Link>
-            </li>
+            <li>• Groupes privés pour organiser des rencontres à plusieurs.</li>
+            <li>• Matchmaking guidé par ton style de vie et tes limites.</li>
+            <li>• Signalements, blocages et règles claires pour rester safe.</li>
           </ul>
-        </div>
+        </section>
 
-        <div className="card" style={{ padding: 14 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 6 }}>Conseil du moment</h2>
-          <p style={{ fontSize: 13, color: '#e5e7eb', marginBottom: 6 }}>
-            Les profils qui ont une description claire et une photo nette
-            reçoivent beaucoup plus de réponses que les profils vides. Prends
-            une minute pour dire ce que tu cherches vraiment.
-          </p>
-          <p style={{ fontSize: 12, color: '#9ca3af' }}>
-            Tu peux aussi utiliser les réactions avec emojis et les
-            icebreakers sur chaque profil pour briser la glace sans prise de
-            tête.
-          </p>
-        </div>
-      </section>
+        {/* Bloc visuel (droite) */}
+        <section
+          aria-hidden="true"
+          style={{
+            position: 'relative',
+            borderRadius: 24,
+            overflow: 'hidden',
+            border: '1px solid rgba(55,65,81,0.7)',
+            background:
+              'radial-gradient(circle at 10% 0%,rgba(248,113,113,0.28),transparent 55%),radial-gradient(circle at 90% 100%,rgba(251,113,133,0.24),transparent 55%),linear-gradient(135deg,#020617,#020617)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'radial-gradient(circle at 0 0,rgba(15,23,42,0.2),transparent 55%)',
+              mixBlendMode: 'soft-light',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'relative',
+              height: '100%',
+              padding: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 12,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: '#9ca3af',
+                    marginBottom: 4,
+                  }}
+                >
+                  En ce moment sur ManyLovr
+                </p>
+                <h2 style={{ fontSize: 18, marginBottom: 4 }}>
+                  Soirées, afterworks,
+                  <br />
+                  rencontres complices.
+                </h2>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: '#9ca3af',
+                    maxWidth: 260,
+                  }}
+                >
+                  Rejoins des groupes affinitaires pour sortir, discuter,
+                  explorer à ton rythme. Pas d’algos opaques, pas de pression.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 6,
+                  minWidth: 150,
+                  fontSize: 11,
+                }}
+              >
+                <div
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    border: '1px solid rgba(55,65,81,0.9)',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 11,
+                      color: '#e5e7eb',
+                    }}
+                  >
+                    Groupe [Soirée chill mixte]
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 10,
+                      color: '#9ca3af',
+                    }}
+                  >
+                    5 membres • Paris • ce week‑end
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    border: '1px solid rgba(55,65,81,0.9)',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 11,
+                      color: '#e5e7eb',
+                    }}
+                  >
+                    Cercle [poly & queer friendly]
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 10,
+                      color: '#9ca3af',
+                    }}
+                  >
+                    8 membres • rencontres longues
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                gap: 12,
+                marginTop: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 30,
+                    height: 30,
+                    borderRadius: '999px',
+                    border: '1px solid rgba(248,250,252,0.7)',
+                    fontSize: 16,
+                  }}
+                >
+                  💬
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    color: '#9ca3af',
+                    maxWidth: 200,
+                  }}
+                >
+                  Tu peux bloquer, signaler ou quitter un groupe à tout moment.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  fontSize: 11,
+                  color: '#94a3b8',
+                  textAlign: 'right',
+                }}
+              >
+                <p style={{ margin: 0 }}>Accès gratuit en bêta fermée.</p>
+                <p style={{ margin: 0 }}>
+                  L’app ne partage jamais ton identité réelle sans ton accord.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

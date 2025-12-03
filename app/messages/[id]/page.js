@@ -29,11 +29,13 @@ export default function ConversationPage() {
       setLoading(true);
       setErrorMsg('');
 
-      // 1) Récupérer l'utilisateur connecté [web:652]
+      // 1) Utilisateur connecté
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
+
+      console.log('🔐 User:', user, 'Error:', userError);
 
       if (userError || !user) {
         setLoading(false);
@@ -43,15 +45,17 @@ export default function ConversationPage() {
 
       setUserId(user.id);
 
-      // 2) Charger la conversation (sans vérifier qu'on en fait partie) [web:988][web:935]
+      // 2) Charger la conversation
       const { data: conv, error: convErr } = await supabase
         .from('conversations')
-        .select('id, user_id_1, user_id_2, is_group, group_id')
+        .select('id, user_id_1, user_id_2, is_group, name')
         .eq('id', conversationId)
         .maybeSingle();
 
+      console.log('💬 Conversation:', conv, 'Error:', convErr);
+
       if (convErr || !conv) {
-        setErrorMsg("Conversation introuvable.");
+        setErrorMsg("Conversation introuvable. " + (convErr?.message || ''));
         setLoading(false);
         return;
       }
@@ -71,6 +75,8 @@ export default function ConversationPage() {
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
 
+      console.log('📨 Messages:', msgs, 'Error:', msgErr);
+
       if (msgErr) {
         setErrorMsg(msgErr.message);
         setMessages([]);
@@ -82,7 +88,6 @@ export default function ConversationPage() {
     }
 
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, router]);
 
   function scrollToBottom() {
@@ -98,7 +103,6 @@ export default function ConversationPage() {
     setSending(true);
     setErrorMsg('');
 
-    // 4) Insérer un nouveau message [web:988]
     const { data, error } = await supabase
       .from('messages')
       .insert({
@@ -108,6 +112,8 @@ export default function ConversationPage() {
       })
       .select('id, sender_id, content, created_at')
       .single();
+
+    console.log('✉️ Insert message:', data, 'Error:', error);
 
     setSending(false);
 
@@ -127,15 +133,9 @@ export default function ConversationPage() {
 
   if (!conversation) {
     return (
-      <main
-        style={{
-          maxWidth: 720,
-          margin: '0 auto',
-          padding: '16px 12px 40px',
-        }}
-      >
+      <main style={{ maxWidth: 720, margin: '0 auto', padding: '16px 12px 40px' }}>
         <div className="card">
-          <p>Conversation introuvable.</p>
+          <p>{errorMsg || 'Conversation introuvable.'}</p>
           <button type="button" onClick={() => router.push('/profiles')}>
             ← Retour aux profils
           </button>
@@ -145,37 +145,16 @@ export default function ConversationPage() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: '0 auto',
-        padding: '16px 12px 40px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}
-    >
+    <main style={{ maxWidth: 720, margin: '0 auto', padding: '16px 12px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button
         type="button"
         onClick={() => router.push('/profiles')}
-        style={{
-          fontSize: 13,
-          padding: '4px 10px',
-          backgroundImage: 'linear-gradient(135deg,#4b5563,#020617)',
-          color: '#e5e7eb',
-        }}
+        style={{ fontSize: 13, padding: '4px 10px', backgroundImage: 'linear-gradient(135deg,#4b5563,#020617)', color: '#e5e7eb' }}
       >
         ← Retour aux profils
       </button>
 
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '70vh',
-        }}
-      >
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
         <h1 style={{ fontSize: 16, marginBottom: 8 }}>Conversation privée</h1>
 
         <div
@@ -189,25 +168,14 @@ export default function ConversationPage() {
           }}
         >
           {loadingMessages ? (
-            <p style={{ fontSize: 13, color: '#9ca3af' }}>
-              Chargement des messages…
-            </p>
+            <p style={{ fontSize: 13, color: '#9ca3af' }}>Chargement des messages…</p>
           ) : messages.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#9ca3af' }}>
-              Aucun message pour le moment. Ouvre le bal avec un premier mot.
-            </p>
+            <p style={{ fontSize: 13, color: '#9ca3af' }}>Aucun message pour le moment. Ouvre le bal avec un premier mot.</p>
           ) : (
             messages.map((m) => {
               const isMine = m.sender_id === userId;
               return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: isMine ? 'flex-end' : 'flex-start',
-                    marginBottom: 6,
-                  }}
-                >
+                <div key={m.id} style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
                   <div
                     style={{
                       maxWidth: '70%',
@@ -219,18 +187,8 @@ export default function ConversationPage() {
                       textAlign: 'left',
                     }}
                   >
-                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                      {m.content}
-                    </p>
-                    <p
-                      style={{
-                        margin: 0,
-                        marginTop: 4,
-                        fontSize: 10,
-                        color: '#9ca3af',
-                        textAlign: 'right',
-                      }}
-                    >
+                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                    <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: '#9ca3af', textAlign: 'right' }}>
                       {new Date(m.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -241,36 +199,15 @@ export default function ConversationPage() {
           <div ref={bottomRef} />
         </div>
 
-        {errorMsg && (
-          <p
-            style={{
-              marginTop: 6,
-              fontSize: 12,
-              color: 'tomato',
-            }}
-          >
-            {errorMsg}
-          </p>
-        )}
+        {errorMsg && <p style={{ marginTop: 6, fontSize: 12, color: 'tomato' }}>{errorMsg}</p>}
 
-        <form
-          onSubmit={handleSend}
-          style={{
-            marginTop: 8,
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
+        <form onSubmit={handleSend} style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             rows={2}
             placeholder="Écris ton message…"
-            style={{
-              flex: 1,
-              resize: 'none',
-            }}
+            style={{ flex: 1, resize: 'none' }}
           />
           <button type="submit" disabled={sending || !inputValue.trim()}>
             {sending ? 'Envoi…' : 'Envoyer'}
