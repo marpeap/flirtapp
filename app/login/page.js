@@ -1,25 +1,11 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-// Wrapper exporté par défaut, sans useSearchParams à l'intérieur
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<main>Chargement de la page de connexion…</main>}>
-      <LoginContent />
-    </Suspense>
-  );
-}
-
-// Contenu réel de la page : ici on peut utiliser useSearchParams
-function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // OK car enveloppé par <Suspense> [web:1009][web:1001]
-
-  // Paramètre optionnel pour rediriger après connexion: /login?redirectTo=/profiles
-  const redirectTo = searchParams.get('redirectTo') || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +18,7 @@ function LoginContent() {
     setLoading(true);
     setErrorMsg('');
 
-    // Login par email + mot de passe (adapte si tu utilises OTP ou social login) [web:1016][web:317]
+    // Connexion email + mot de passe (modèle recommandé par Supabase pour Next.js) [web:1016][web:317]
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -45,8 +31,8 @@ function LoginContent() {
       return;
     }
 
-    // Redirection après succès
-    router.push(redirectTo);
+    // Redirection simple après connexion (tu pourras affiner plus tard)
+    router.push('/');
   }
 
   return (
