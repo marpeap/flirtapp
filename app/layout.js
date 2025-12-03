@@ -1,24 +1,19 @@
 import './globals.css';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export const metadata = {
-  title: 'Mon site de rencontres',
-  description: 'Rencontres rapides, amicales ou coquines.',
+  title: 'CupidWave',
+  description: 'CupidWave — rencontres proches, simples et assumées.',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      <body
-        style={{
-          margin: 0,
-          backgroundColor: '#000',
-          color: '#fff',
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-        }}
-      >
+      <body>
         <Header />
-        <div style={{ minHeight: '100vh' }}>{children}</div>
+        <div style={{ minHeight: 'calc(100vh - 120px)' }}>{children}</div>
+        <Footer />
       </body>
     </html>
   );

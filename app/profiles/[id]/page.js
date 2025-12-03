@@ -4,6 +4,50 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 
+const REACTION_LEVELS = [
+  { level: 1, emoji: '😐', label: 'Bof' },
+  { level: 2, emoji: '🙂', label: 'Sympa' },
+  { level: 3, emoji: '😍', label: 'J’aime bien' },
+  { level: 4, emoji: '🔥', label: 'Très chaud' },
+  { level: 5, emoji: '💘', label: 'Coup de cœur' },
+];
+
+function getIcebreakersForProfile(p) {
+  const generic = [
+    "Qu’est-ce qui t’a donné envie de t’inscrire sur CupidWave ?",
+    "C’est quoi pour toi une rencontre réussie ?",
+  ];
+
+  if (!p) return generic;
+
+  const list = [...generic];
+
+  if (p.main_intent === 'friendly') {
+    list.push(
+      "Tu cherches plutôt des potes de sortie ou des gens avec qui vraiment te confier ?",
+      "Si on devait faire une activité amicale ensemble, ce serait quoi ?"
+    );
+  } else if (p.main_intent === 'sexy') {
+    list.push(
+      "Qu’est-ce qui compte le plus pour toi dans une rencontre charnelle réussie ?",
+      "Tu es plus team slow burn ou feeling instantané ?"
+    );
+  } else if (p.main_intent === 'both') {
+    list.push(
+      "Tu préfères qu’on commence chill/amical ou tu aimes quand ça devient vite plus intense ?",
+      "Tu imagines quoi comme vibe idéale entre nous si le feeling passe ?"
+    );
+  }
+
+  if (p.city) {
+    list.push(
+      `Si on se voyait dans ${p.city}, ce serait plutôt café, bar discret ou balade nocturne ?`
+    );
+  }
+
+  return list.slice(0, 4);
+}
+
 export default function ProfileDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -16,36 +60,96 @@ export default function ProfileDetailPage() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState('');
 
-  // Charger le profil
-  useEffect(() => {
-    async function loadProfile() {
-      setErrorMsg('');
-      setLoading(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [myReactionLevel, setMyReactionLevel] = useState(null);
+  const [reactionSaving, setReactionSaving] = useState(false);
 
-      const { data, error } = await supabase
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockInfo, setBlockInfo] = useState('');
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadAll() {
+      setLoading(true);
+      setErrorMsg('');
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        setLoading(false);
+        router.push('/login');
+        return;
+      }
+
+      const userId = userData.user.id;
+      setCurrentUserId(userId);
+
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(
-          'id, user_id, display_name, gender, main_intent, city, bio, main_photo_url'
+          'id, user_id, display_name, gender, main_intent, city, bio, main_photo_url, looking_for_gender'
         )
         .eq('id', profileId)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        setProfile(data);
+      if (profileError || !profileData) {
+        setErrorMsg(profileError?.message || 'Profil introuvable.');
+        setLoading(false);
+        return;
       }
+
+      setProfile(profileData);
+
+      // Vérifier blocage dans les deux sens
+      const { data: blockRows, error: blockError } = await supabase
+        .from('blocks')
+        .select('blocker_id, blocked_id')
+        .or(
+          `blocker_id.eq.${userId},blocked_id.eq.${userId}`
+        )
+        .or(
+          `blocked_id.eq.${profileData.user_id},blocker_id.eq.${profileData.user_id}`
+        );
+
+      if (!blockError && blockRows && blockRows.length > 0) {
+        setIsBlocked(true);
+        const someoneBlockedMe = blockRows.some(
+          (b) => b.blocker_id === profileData.user_id && b.blocked_id === userId
+        );
+        if (someoneBlockedMe) {
+          setBlockInfo(
+            'Cette personne t’a bloqué. Vous ne pouvez plus interagir sur CupidWave.'
+          );
+        } else {
+          setBlockInfo(
+            'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur CupidWave.'
+          );
+        }
+      }
+
+      if (profileData.user_id !== userId) {
+        const { data: reaction, error: reactionError } = await supabase
+          .from('reactions')
+          .select('level')
+          .eq('from_user_id', userId)
+          .eq('to_profile_id', profileData.id)
+          .maybeSingle();
+
+        if (!reactionError && reaction) {
+          setMyReactionLevel(reaction.level);
+        }
+      }
+
       setLoading(false);
     }
 
     if (profileId) {
-      loadProfile();
+      loadAll();
     }
-  }, [profileId]);
+  }, [profileId, router]);
 
-  // Clic sur "Entrer en contact"
   async function handleContactClick() {
-    if (!profile) return;
+    if (!profile || !currentUserId || isBlocked) return;
 
     setContactError('');
     setContactLoading(true);
@@ -57,26 +161,46 @@ export default function ProfileDetailPage() {
       return;
     }
 
-    const currentUserId = userData.user.id;
+    const userId = userData.user.id;
     const otherUserId = profile.user_id;
 
-    if (currentUserId === otherUserId) {
+    if (userId === otherUserId) {
       setContactLoading(false);
       setContactError("Tu ne peux pas discuter avec toi‑même.");
+      return;
+    }
+
+    // Double check blocage avant d’ouvrir une conversation
+    const { data: blockRows, error: blockError } = await supabase
+      .from('blocks')
+      .select('id')
+      .or(
+        `blocker_id.eq.${userId},blocked_id.eq.${userId}`
+      )
+      .or(
+        `blocker_id.eq.${otherUserId},blocked_id.eq.${otherUserId}`
+      );
+
+    if (!blockError && blockRows && blockRows.length > 0) {
+      setContactLoading(false);
+      setContactError(
+        'La conversation est impossible car un blocage existe entre vous.'
+      );
+      setIsBlocked(true);
       return;
     }
 
     let { data: conv1, error: convError1 } = await supabase
       .from('conversations')
       .select('id')
-      .match({ user_id_1: currentUserId, user_id_2: otherUserId })
+      .match({ user_id_1: userId, user_id_2: otherUserId })
       .maybeSingle();
 
     if (!conv1 && !convError1) {
       const { data: conv2, error: convError2 } = await supabase
         .from('conversations')
         .select('id')
-        .match({ user_id_1: otherUserId, user_id_2: currentUserId })
+        .match({ user_id_1: otherUserId, user_id_2: userId })
         .maybeSingle();
       conv1 = conv2;
       convError1 = convError2;
@@ -88,7 +212,7 @@ export default function ProfileDetailPage() {
       const { data: newConv, error: insertError } = await supabase
         .from('conversations')
         .insert({
-          user_id_1: currentUserId,
+          user_id_1: userId,
           user_id_2: otherUserId,
         })
         .select('id')
@@ -112,6 +236,109 @@ export default function ProfileDetailPage() {
     router.push(`/messages/${conversationId}`);
   }
 
+  async function handleReaction(level) {
+    if (!profile || !currentUserId || isBlocked) return;
+
+    setReactionSaving(true);
+
+    const { error } = await supabase
+      .from('reactions')
+      .upsert(
+        {
+          from_user_id: currentUserId,
+          to_profile_id: profile.id,
+          level,
+        },
+        { onConflict: 'from_user_id, to_profile_id' }
+      );
+
+    setReactionSaving(false);
+
+    if (!error) {
+      setMyReactionLevel(level);
+
+      if (level >= 4) {
+        const buttons = document.querySelectorAll('.cw-heart-pop');
+        buttons.forEach((btn) => {
+          btn.classList.remove('cw-heart-pop-active');
+        });
+        requestAnimationFrame(() => {
+          const activeBtn = document.activeElement;
+          if (activeBtn && activeBtn.classList.contains('cw-heart-pop')) {
+            activeBtn.classList.add('cw-heart-pop-active');
+          }
+        });
+      }
+    } else {
+      console.error(error);
+    }
+  }
+
+  async function handleBlock() {
+    if (!profile || !currentUserId) return;
+    const confirmBlock = window.confirm(
+      "Bloquer cette personne ? Vous ne pourrez plus voir vos profils ni échanger de messages."
+    );
+    if (!confirmBlock) return;
+
+    setBlockLoading(true);
+    setErrorMsg('');
+
+    const { error } = await supabase.from('blocks').upsert(
+      {
+        blocker_id: currentUserId,
+        blocked_id: profile.user_id,
+      },
+      { onConflict: 'blocker_id, blocked_id' }
+    );
+
+    setBlockLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setIsBlocked(true);
+      setBlockInfo(
+        'Tu as bloqué cette personne. Vous ne pouvez plus interagir sur CupidWave.'
+      );
+    }
+  }
+
+  async function handleReport() {
+    if (!profile || !currentUserId) return;
+
+    const category = window.prompt(
+      "Pourquoi veux‑tu signaler ce profil ?\nExemples : harcèlement, faux profil, contenu inapproprié, spam…"
+    );
+    if (!category) return;
+
+    const details = window.prompt(
+      'Tu peux ajouter des détails (facultatif). Ils resteront privés et ne seront pas visibles par l’autre personne.'
+    );
+
+    setReportLoading(true);
+    setErrorMsg('');
+
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: currentUserId,
+      reported_user_id: profile.user_id,
+      target_type: 'profile',
+      target_id: profile.id,
+      category: category.slice(0, 100),
+      details: details || null,
+    });
+
+    setReportLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      alert(
+        'Merci pour ton signalement. Il sera examiné. N’hésite pas à bloquer ce profil si tu ne veux plus le voir.'
+      );
+    }
+  }
+
   if (loading) {
     return <main>Chargement…</main>;
   }
@@ -127,44 +354,246 @@ export default function ProfileDetailPage() {
     );
   }
 
+  const isOwnProfile = currentUserId === profile.user_id;
+
   return (
     <main>
       <button onClick={() => router.push('/profiles')}>← Retour</button>
 
-      <div className="list-card-item" style={{ marginTop: 16 }}>
-        {profile.main_photo_url && (
-          <img
-            src={profile.main_photo_url}
-            alt={profile.display_name || 'Photo de profil'}
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              marginBottom: 12,
-            }}
-          />
-        )}
-        <h1 style={{ marginBottom: 12 }}>{profile.display_name}</h1>
-        <p>Ville : {profile.city || 'Non renseignée'}</p>
-        <p>Genre : {profile.gender || '-'}</p>
-        <p>Intention : {profile.main_intent || '-'}</p>
-        {profile.bio && (
-          <p style={{ marginTop: 8 }}>À propos : {profile.bio}</p>
-        )}
-      </div>
-
-      <button
-        style={{ marginTop: 20 }}
-        onClick={handleContactClick}
-        disabled={contactLoading}
+      <div
+        className="card"
+        style={{
+          marginTop: 16,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1.2fr)',
+          gap: 18,
+        }}
       >
-        {contactLoading ? 'Ouverture…' : 'Entrer en contact'}
-      </button>
+        {/* Colonne gauche : photo + infos */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+          }}
+        >
+          {profile.main_photo_url && (
+            <img
+              src={profile.main_photo_url}
+              alt={profile.display_name || 'Photo de profil'}
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                marginBottom: 12,
+                border: '2px solid #f97316',
+                boxShadow: '0 0 0 3px rgba(249,115,22,0.25)',
+              }}
+            />
+          )}
+          <h1 style={{ marginBottom: 6 }}>
+            {profile.display_name || 'Sans pseudo'}
+          </h1>
+          <p style={{ fontSize: 13, color: '#9ca3af' }}>
+            {profile.city || 'Ville ?'} • {profile.gender || 'Genre ?'}
+          </p>
+          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+            Intention : {profile.main_intent || 'Non précisée'}
+          </p>
+        </div>
 
-      {contactError && (
-        <p style={{ color: 'red', marginTop: 12 }}>{contactError}</p>
-      )}
+        {/* Colonne droite : bio + actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {profile.bio && (
+            <section>
+              <h2 style={{ fontSize: 15, marginBottom: 4 }}>À propos</h2>
+              <p style={{ fontSize: 14 }}>{profile.bio}</p>
+            </section>
+          )}
+
+          {!isOwnProfile && !isBlocked && (
+            <section>
+              <h2 style={{ fontSize: 15, marginBottom: 6 }}>
+                Ce que tu penses de ce profil
+              </h2>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: '#9ca3af',
+                  marginBottom: 6,
+                }}
+              >
+                Choisis un emoji pour exprimer ton niveau d’intérêt. Tu peux le
+                changer à tout moment.
+              </p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {REACTION_LEVELS.map((r) => {
+                  const active = myReactionLevel === r.level;
+                  const strongLike = r.level >= 4;
+                  return (
+                    <button
+                      key={r.level}
+                      type="button"
+                      disabled={reactionSaving}
+                      onClick={() => handleReaction(r.level)}
+                      title={r.label}
+                      className={`cw-bounce ${strongLike ? 'cw-heart-pop' : ''}`}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        border: active
+                          ? '1px solid #f97316'
+                          : '1px solid #1f2937',
+                        backgroundColor: active ? '#111827' : '#020617',
+                        fontSize: 16,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        position: 'relative',
+                      }}
+                    >
+                      <span>{r.emoji}</span>
+                      <span style={{ fontSize: 12 }}>{r.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {!isOwnProfile && !isBlocked && (
+            <section style={{ marginTop: 6 }}>
+              <h2 style={{ fontSize: 14, marginBottom: 4 }}>
+                Idées de premier message
+              </h2>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: '#9ca3af',
+                  marginBottom: 6,
+                }}
+              >
+                Ces phrases ne sont jamais envoyées automatiquement. Tu peux t’en
+                inspirer ou les copier/coller dans la discussion.
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                {getIcebreakersForProfile(profile).map((txt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className="cw-badge-icebreaker cw-bounce"
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(txt)
+                        .then(() =>
+                          alert(
+                            'Icebreaker copié dans le presse‑papiers. Tu peux le coller dans le chat.'
+                          )
+                        )
+                        .catch(() => {});
+                    }}
+                    style={{
+                      fontSize: 12,
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      border: '1px solid #1f2937',
+                      backgroundColor: '#020617',
+                      textAlign: 'left',
+                      color: '#e5e7eb',
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {txt}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!isOwnProfile && (
+            <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {!isBlocked && (
+                <button
+                  style={{ marginTop: 4 }}
+                  onClick={handleContactClick}
+                  disabled={contactLoading}
+                >
+                  {contactLoading ? 'Ouverture…' : 'Entrer en contact'}
+                </button>
+              )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleBlock}
+                  disabled={blockLoading}
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(135deg,#4b5563,#111827)',
+                    color: '#e5e7eb',
+                    padding: '6px 12px',
+                    fontSize: 12,
+                  }}
+                >
+                  {blockLoading ? 'Blocage…' : 'Bloquer ce profil'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  disabled={reportLoading}
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(135deg,#f97373,#b91c1c)',
+                    color: '#fef2f2',
+                    padding: '6px 12px',
+                    fontSize: 12,
+                  }}
+                >
+                  {reportLoading ? 'Envoi…' : 'Signaler'}
+                </button>
+              </div>
+
+              {blockInfo && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: '#fca5a5',
+                    marginTop: 4,
+                  }}
+                >
+                  {blockInfo}
+                </p>
+              )}
+              {contactError && (
+                <p style={{ color: 'tomato', marginTop: 4, fontSize: 12 }}>
+                  {contactError}
+                </p>
+              )}
+            </section>
+          )}
+
+          {errorMsg && (
+            <p style={{ color: 'tomato', marginTop: 8, fontSize: 12 }}>
+              {errorMsg}
+            </p>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

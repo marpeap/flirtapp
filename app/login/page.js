@@ -16,7 +16,7 @@ export default function LoginPage() {
     setErrorMsg('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -25,51 +25,72 @@ export default function LoginPage() {
 
     if (error) {
       setErrorMsg(error.message);
-    } else {
-      // après login réussi, on t’enverra vers la page principale
-      router.push('/');
+      return;
+    }
+
+    if (data?.user) {
+      router.push('/profiles');
     }
   }
 
   return (
-    <main style={{ maxWidth: 400, margin: '40px auto', color: 'white' }}>
-      <h1>Connexion</h1>
+    <main>
+      <div className="card" style={{ maxWidth: 420, margin: '0 auto' }}>
+        <h1>Connexion</h1>
+        <p style={{ marginBottom: 18, color: '#9ca3af', fontSize: 14 }}>
+          Retrouve ton compte et tes conversations.
+        </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Mot de passe
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: 10, marginTop: 8 }}
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
         >
-          {loading ? 'Connexion…' : 'Se connecter'}
-        </button>
-      </form>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ marginTop: 4 }}
+              placeholder="toi@example.com"
+            />
+          </label>
 
-      {errorMsg && (
-        <p style={{ color: 'red', marginTop: 16 }}>{errorMsg}</p>
-      )}
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ marginTop: 4 }}
+              placeholder="••••••••"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ marginTop: 4, alignSelf: 'flex-start' }}
+          >
+            {loading ? 'Connexion…' : 'Me connecter'}
+          </button>
+        </form>
+
+        {errorMsg && (
+          <p style={{ color: 'tomato', marginTop: 16, fontSize: 14 }}>
+            {errorMsg}
+          </p>
+        )}
+
+        <p style={{ marginTop: 16, fontSize: 13, color: '#9ca3af' }}>
+          Pas encore de compte ?{' '}
+          <a href="/signup" style={{ color: '#7dd3fc' }}>
+            Créer un profil
+          </a>
+        </p>
+      </div>
     </main>
   );
 }

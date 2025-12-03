@@ -28,52 +28,68 @@ export default function SignUpPage() {
       return;
     }
 
-    // Redirection directe vers l'onboarding
+    // Après inscription, on envoie directement sur la création de profil
     router.push('/onboarding');
   }
 
   return (
-    <main style={{ maxWidth: 400, margin: '40px auto', color: 'white' }}>
-      <h1>Inscription</h1>
+    <main>
+      <div className="card" style={{ maxWidth: 420, margin: '0 auto' }}>
+        <h1>Créer un compte</h1>
+        <p style={{ marginBottom: 18, color: '#9ca3af', fontSize: 14 }}>
+          Un email, un mot de passe, et tu peux commencer à rencontrer du monde.
+        </p>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-      >
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Mot de passe
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: 10, marginTop: 8 }}
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
         >
-          {loading ? 'Création…' : 'Créer mon compte'}
-        </button>
-      </form>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ marginTop: 4 }}
+              placeholder="toi@example.com"
+            />
+          </label>
 
-      {errorMsg && (
-        <p style={{ color: 'red', marginTop: 16 }}>{errorMsg}</p>
-      )}
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ marginTop: 4 }}
+              placeholder="Au moins 6 caractères"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ marginTop: 4, alignSelf: 'flex-start' }}
+          >
+            {loading ? 'Création…' : 'Créer mon compte'}
+          </button>
+        </form>
+
+        {errorMsg && (
+          <p style={{ color: 'tomato', marginTop: 16, fontSize: 14 }}>
+            {errorMsg}
+          </p>
+        )}
+
+        <p style={{ marginTop: 16, fontSize: 13, color: '#9ca3af' }}>
+          Tu as déjà un compte ?{' '}
+          <a href="/login" style={{ color: '#7dd3fc' }}>
+            Me connecter
+          </a>
+        </p>
+      </div>
     </main>
   );
 }
