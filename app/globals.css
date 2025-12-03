@@ -1,97 +1,107 @@
-/* Reset */
+/* ===========================
+   Reset de base
+   =========================== */
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
   margin: 0;
   padding: 0;
 }
 
-/* Fond et typo */
-html,
-body {
-  height: 100%;
-}
+/* ===========================
+   Corps & fond global
+   =========================== */
 
 body {
-  background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
-  background-color: #020617;
-  color: #fde68a; /* jaune chaud doux */
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
+  color: #e5e7eb;
+
+  /* Fond de base (si l'image ne charge pas) */
+  background-color: #020617;
+
+  /* Image de fond globale (mets ton vrai chemin ici) */
+  background-image: url('/backgrounds/app-bg.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
-/* Liens */
+/* ===========================
+   Layout global
+   =========================== */
+
+/* Toutes les pages utilisent <main> : on le centre simplement */
+main {
+  width: 100%;
+  max-width: 960px; /* adapte si tu veux plus large */
+  min-height: 100vh;
+  margin: 0 auto; /* centre horizontalement */
+  padding: 16px 12px 40px;
+}
+
+/* ===========================
+   Liens
+   =========================== */
+
 a {
-  color: #fda4af; /* rose chaud */
+  color: #38bdf8;
+  text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
 }
 
-/* Titres & texte */
-h1 {
-  font-size: 1.9rem;
-  margin-bottom: 0.75rem;
+/* ===========================
+   Cartes réutilisables
+   =========================== */
+
+.card {
+  border-radius: 16px;
+  padding: 16px 14px;
+  border: 1px solid #1f2937;
+  background-color: rgba(2, 6, 23, 0.9);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
 }
 
-h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-}
+/* ===========================
+   Boutons & champs
+   =========================== */
 
-p {
-  line-height: 1.5;
-}
-
-/* Boutons – gradient corail + légère animation */
 button {
-  background-image: linear-gradient(135deg, #fb7185, #f97316);
-  color: #111827;
-  border: none;
   border-radius: 999px;
-  padding: 10px 18px;
+  border: 1px solid #1f2937;
+  background-color: #020617;
+  color: #e5e7eb;
+  padding: 6px 12px;
+  font-size: 13px;
   cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  transition:
-    transform 0.14s ease-out,
-    box-shadow 0.14s ease-out,
-    background-position 0.25s ease-out;
-  background-size: 140% 140%;
-  background-position: 0% 50%;
-  box-shadow: 0 10px 24px rgba(248, 113, 113, 0.35);
-  will-change: transform, box-shadow, background-position;
 }
 
 button:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: default;
-  box-shadow: none;
 }
 
-button:hover:not(:disabled) {
-  background-position: 100% 50%;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(248, 113, 113, 0.45);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 8px 18px rgba(248, 113, 113, 0.3);
-}
-
-/* Inputs */
 input,
 select,
 textarea {
-  background-color: #020617;
-  color: #fef9c3;
+  border-radius: 8px;
   border: 1px solid #1f2937;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font: inherit;
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  padding: 6px 8px;
+  font-size: 13px;
 }
 
 input::placeholder,
@@ -99,103 +109,24 @@ textarea::placeholder {
   color: #6b7280;
 }
 
-/* Conteneur principal */
-main {
-  max-width: 880px;
-  margin: 32px auto 48px auto;
-  padding: 0 16px;
+/* ===========================
+   Scrollbar (optionnel)
+   =========================== */
+
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Cartes */
-.card {
-  background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.12), #020617);
-  border-radius: 16px;
-  border: 1px solid #1f2937;
-  padding: 18px 16px;
-  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.85);
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.7);
 }
 
-/* Listes de cartes (profils, conversations) */
-.list-card {
-  list-style: none;
-  padding: 0;
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
 }
 
-.list-card-item {
-  background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.08), #020617);
-  border: 1px solid #1f2937;
-  border-radius: 12px;
-  padding: 14px 12px;
-  margin-bottom: 10px;
-  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.8);
-  transition:
-    transform 0.12s ease-out,
-    box-shadow 0.12s ease-out,
-    border-color 0.12s ease-out;
-}
-
-.list-card-item:hover {
-  transform: translateY(-2px);
-  border-color: #fb7185;
-  box-shadow: 0 20px 40px rgba(248, 113, 113, 0.35);
-}
-
-/* Zone messages */
-.chat-box {
-  border: 1px solid #1f2937;
-  border-radius: 10px;
-  padding: 12px;
-  min-height: 200px;
-  margin-bottom: 12px;
-  background-color: #020617;
-}
-
-/* Micro-interactions CupidWave */
-
-/* Petit rebond sur clic */
-.cw-bounce {
-  transition: transform 0.12s ease-out;
-}
-
-.cw-bounce:active {
-  transform: scale(0.94);
-}
-
-/* Animation de cœur pour les gros likes (niveau 4-5) */
-@keyframes cw-heart-pop {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-.cw-heart-pop {
-  position: relative;
-}
-
-.cw-heart-pop::after {
-  content: '💘';
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%) scale(0.5);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.cw-heart-pop.cw-heart-pop-active::after {
-  animation: cw-heart-pop 0.45s ease-out forwards;
-}
-
-/* Badges d'icebreakers */
-.cw-badge-icebreaker:hover {
-  border-color: #fb7185;
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 

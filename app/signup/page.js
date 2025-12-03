@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function SignUpPage() {
@@ -10,10 +11,12 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg('');
+    setInfoMsg('');
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
@@ -28,67 +31,122 @@ export default function SignUpPage() {
       return;
     }
 
-    // Après inscription, on envoie directement sur la création de profil
-    router.push('/onboarding');
+    // Selon la config Supabase, un email de confirmation peut être envoyé.
+    setInfoMsg(
+      "Ton compte a été créé. Si la confirmation par e‑mail est activée, pense à vérifier ta boîte mail. Tu peux maintenant compléter ton profil."
+    );
+
+    // Redirection douce vers l’onboarding après un petit délai
+    setTimeout(() => {
+      router.push('/onboarding');
+    }, 1500);
   }
 
   return (
-    <main>
-      <div className="card" style={{ maxWidth: 420, margin: '0 auto' }}>
-        <h1>Créer un compte</h1>
-        <p style={{ marginBottom: 18, color: '#9ca3af', fontSize: 14 }}>
-          Un email, un mot de passe, et tu peux commencer à rencontrer du monde.
+    <main
+      style={{
+        minHeight: '100vh',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 16px',
+      }}
+    >
+      {/* Image de fond plein écran */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -2,
+        }}
+      >
+        <Image
+          src="/background.png" // mets ici le nom exact de ton fichier dans /public
+          alt="Fond CupidWave"
+          fill
+          priority
+          sizes="100vw"
+          style={{
+            objectFit: 'cover',
+          }}
+        />
+      </div>
+
+      {/* Overlay sombre léger pour garder le texte lisible */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background:
+            'radial-gradient(circle at top, rgba(15,23,42,0.4), rgba(15,23,42,0.9))',
+          zIndex: -1,
+        }}
+      />
+
+      {/* Carte glassmorphism avec le formulaire */}
+      <div
+        className="card"
+        style={{
+          maxWidth: 420,
+          width: '100%',
+        }}
+      >
+        <h1>Créer mon compte CupidWave</h1>
+        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 14 }}>
+          Un e‑mail et un mot de passe suffisent pour commencer. Tu pourras
+          ensuite compléter ton profil et choisir le type de rencontres que tu
+          cherches.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          <label>
-            Email
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <label style={{ fontSize: 13 }}>
+            Adresse e‑mail
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ marginTop: 4 }}
               placeholder="toi@example.com"
+              style={{ marginTop: 4, width: '100%' }}
             />
           </label>
 
-          <label>
+          <label style={{ fontSize: 13 }}>
             Mot de passe
             <input
               type="password"
+              required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ marginTop: 4 }}
               placeholder="Au moins 6 caractères"
+              style={{ marginTop: 4, width: '100%' }}
             />
           </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ marginTop: 4, alignSelf: 'flex-start' }}
-          >
-            {loading ? 'Création…' : 'Créer mon compte'}
+          <button type="submit" disabled={loading} style={{ marginTop: 8 }}>
+            {loading ? 'Création en cours…' : 'Créer mon compte'}
           </button>
         </form>
 
-        {errorMsg && (
-          <p style={{ color: 'tomato', marginTop: 16, fontSize: 14 }}>
-            {errorMsg}
-          </p>
-        )}
-
-        <p style={{ marginTop: 16, fontSize: 13, color: '#9ca3af' }}>
+        <p style={{ fontSize: 13, marginTop: 10 }}>
           Tu as déjà un compte ?{' '}
-          <a href="/login" style={{ color: '#7dd3fc' }}>
+          <a href="/login" style={{ color: '#fda4af' }}>
             Me connecter
           </a>
         </p>
+
+        {errorMsg && (
+          <p style={{ color: 'tomato', marginTop: 10, fontSize: 13 }}>
+            {errorMsg}
+          </p>
+        )}
+        {infoMsg && (
+          <p style={{ color: '#a3e635', marginTop: 10, fontSize: 13 }}>
+            {infoMsg}
+          </p>
+        )}
       </div>
     </main>
   );

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
+const MAX_GROUP_SIZE = 7; // toi + 6 autres
+
 export default function ProfilesListPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState([]);
@@ -13,7 +15,6 @@ export default function ProfilesListPage() {
 
   const [filterIntent, setFilterIntent] = useState('');
   const [filterGender, setFilterGender] = useState('');
-  const [filterLookingFor, setFilterLookingFor] = useState('');
   const [radiusKm, setRadiusKm] = useState(25);
 
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -26,7 +27,7 @@ export default function ProfilesListPage() {
   const [tornadoLoading, setTornadoLoading] = useState(false);
   const [tornadoError, setTornadoError] = useState('');
   const [tornadoRemaining, setTornadoRemaining] = useState(10);
-  const [tornadoSessionSwipes, setTornadoSessionSwipes] = useState([]); // {profile, decision}
+  const [tornadoSessionSwipes, setTornadoSessionSwipes] = useState([]);
 
   // Push Éclair
   const [pushOpen, setPushOpen] = useState(false);
@@ -35,6 +36,12 @@ export default function ProfilesListPage() {
   const [pushError, setPushError] = useState('');
   const [pushInfo, setPushInfo] = useState('');
   const [pushCredits, setPushCredits] = useState(0);
+
+  // Sélection pour match de groupe
+  const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+  const [groupMatchLoading, setGroupMatchLoading] = useState(false);
+  const [groupMatchError, setGroupMatchError] = useState('');
+  const [groupMatchInfo, setGroupMatchInfo] = useState('');
 
   // Chargement de la liste principale
   useEffect(() => {
@@ -57,7 +64,9 @@ export default function ProfilesListPage() {
         error: ownProfileError,
       } = await supabase
         .from('profiles')
-        .select('id, lat, lng, gender, looking_for_gender, push_eclair_credits')
+        .select(
+          'id, lat, lng, gender, looking_for_gender, push_eclair_credits'
+        )
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -127,8 +136,6 @@ export default function ProfilesListPage() {
       list = (list || []).filter((p) => {
         const byIntent = !filterIntent || p.main_intent === filterIntent;
         const byGenderFilter = !filterGender || p.gender === filterGender;
-        const byLookingForFilter =
-          !filterLookingFor || p.looking_for_gender === filterLookingFor;
 
         let byMyPreference = true;
         if (own.looking_for_gender === 'men') {
@@ -139,12 +146,7 @@ export default function ProfilesListPage() {
           byMyPreference = p.gender === 'couple';
         }
 
-        return (
-          byIntent &&
-          byGenderFilter &&
-          byLookingForFilter &&
-          byMyPreference
-        );
+        return byIntent && byGenderFilter && byMyPreference;
       });
 
       setProfiles(list);
@@ -152,9 +154,10 @@ export default function ProfilesListPage() {
     }
 
     loadData();
-  }, [router, filterIntent, filterGender, filterLookingFor, radiusKm]);
+  }, [router, filterIntent, filterGender, radiusKm]);
 
-  // Ouvrir Tornado : charger candidats + compteur restant
+  // --- Mode Tornado ---
+
   async function openTornado() {
     if (!currentUserId || !ownProfile) return;
 
@@ -163,7 +166,7 @@ export default function ProfilesListPage() {
     setTornadoError('');
     setTornadoProfiles([]);
     setTornadoIndex(0);
-    setTornadoSessionSwipes([]); // reset session
+    setTornadoSessionSwipes([]);
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -207,8 +210,6 @@ export default function ProfilesListPage() {
     let candidates = (nearby || []).filter((p) => {
       const byIntent = !filterIntent || p.main_intent === filterIntent;
       const byGenderFilter = !filterGender || p.gender === filterGender;
-      const byLookingForFilter =
-        !filterLookingFor || p.looking_for_gender === filterLookingFor;
 
       let byMyPreference = true;
       if (ownProfile.looking_for_gender === 'men') {
@@ -219,12 +220,7 @@ export default function ProfilesListPage() {
         byMyPreference = p.gender === 'couple';
       }
 
-      return (
-        byIntent &&
-        byGenderFilter &&
-        byLookingForFilter &&
-        byMyPreference
-      );
+      return byIntent && byGenderFilter && byMyPreference;
     });
 
     candidates = candidates.sort(() => Math.random() - 0.5);
@@ -256,7 +252,6 @@ export default function ProfilesListPage() {
       return;
     }
 
-    // Enregistrer dans le récap de session
     setTornadoSessionSwipes((prev) => [
       ...prev,
       { profile: current, decision },
@@ -272,7 +267,6 @@ export default function ProfilesListPage() {
     }
   }
 
-  // Stats de la session Tornado
   const totalSessionSwipes = tornadoSessionSwipes.length;
   const sessionLikes = tornadoSessionSwipes.filter(
     (s) => s.decision === 'like'
@@ -285,7 +279,8 @@ export default function ProfilesListPage() {
     (tornadoRemaining <= 0 ||
       tornadoIndex >= tornadoProfiles.length);
 
-  // Ouverture overlay Push Éclair
+  // --- Push Éclair ---
+
   function openPush() {
     setPushError('');
     setPushInfo('');
@@ -298,7 +293,6 @@ export default function ProfilesListPage() {
     setPushOpen(false);
   }
 
-  // Envoi Push Éclair : 30 km autour, max 100 personnes, 1 crédit
   async function handleSendPush() {
     if (!currentUserId || !ownProfile) return;
     if (!pushImageFile) {
@@ -470,6 +464,107 @@ export default function ProfilesListPage() {
     );
   }
 
+  // --- Sélection pour match de groupe ---
+
+  function toggleSelectProfile(profileId) {
+    setGroupMatchError('');
+    setGroupMatchInfo('');
+    setSelectedProfileIds((prev) => {
+      if (prev.includes(profileId)) {
+        return prev.filter((id) => id !== profileId);
+      }
+      const maxOthers = MAX_GROUP_SIZE - 1;
+      if (prev.length >= maxOthers) {
+        return prev;
+      }
+      return [...prev, profileId];
+    });
+  }
+
+  async function handleCreateGroupMatch() {
+    if (!currentUserId || !selectedProfileIds.length) return;
+    setGroupMatchError('');
+    setGroupMatchInfo('');
+    setGroupMatchLoading(true);
+
+    try {
+      const { data: selectedProfiles, error: selErr } = await supabase
+        .from('profiles')
+        .select('id, user_id, display_name')
+        .in('id', selectedProfileIds);
+
+      if (selErr) {
+        setGroupMatchLoading(false);
+        setGroupMatchError(selErr.message);
+        return;
+      }
+
+      const names = (selectedProfiles || [])
+        .map((p) => p.display_name)
+        .filter(Boolean);
+      const title =
+        names.length > 0
+          ? `Ménage avec ${names.join(', ')}`
+          : 'Match de groupe CupidWave';
+
+      const { data: propRow, error: propErr } = await supabase
+        .from('group_match_proposals')
+        .insert({
+          creator_user_id: currentUserId,
+          title,
+          max_size: MAX_GROUP_SIZE,
+        })
+        .select('id')
+        .single();
+
+      if (propErr || !propRow) {
+        setGroupMatchLoading(false);
+        setGroupMatchError(
+          propErr?.message || 'Erreur lors de la création de la proposition.'
+        );
+        return;
+      }
+
+      const proposalId = propRow.id;
+
+      const membersUserIds =
+        selectedProfiles?.map((p) => p.user_id).filter(Boolean) || [];
+
+      const rows = [
+        {
+          proposal_id: proposalId,
+          user_id: currentUserId,
+          status: 'accepted',
+        },
+        ...membersUserIds.map((uid) => ({
+          proposal_id: proposalId,
+          user_id: uid,
+          status: 'invited',
+        })),
+      ];
+
+      const { error: candErr } = await supabase
+        .from('group_match_candidates')
+        .insert(rows);
+
+      if (candErr) {
+        setGroupMatchLoading(false);
+        setGroupMatchError(candErr.message);
+        return;
+      }
+
+      setGroupMatchLoading(false);
+      setSelectedProfileIds([]);
+      setGroupMatchInfo(
+        "Proposition envoyée. Chaque personne pourra voir les candidats du groupe et accepter ou refuser."
+      );
+    } catch (err) {
+      console.error(err);
+      setGroupMatchLoading(false);
+      setGroupMatchError('Erreur inconnue lors de la création du groupe.');
+    }
+  }
+
   if (loading) {
     return <main>Chargement…</main>;
   }
@@ -507,7 +602,7 @@ export default function ProfilesListPage() {
       <div
         className="card"
         style={{
-          marginBottom: 20,
+          marginBottom: 16,
           padding: '12px 12px',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -549,23 +644,6 @@ export default function ProfilesListPage() {
 
         <div>
           <label style={{ fontSize: 13, color: '#9ca3af' }}>
-            Ils cherchent plutôt
-          </label>
-          <select
-            value={filterLookingFor}
-            onChange={(e) => setFilterLookingFor(e.target.value)}
-            style={{ marginTop: 4, width: '100%' }}
-          >
-            <option value="">Peu importe</option>
-            <option value="men">Des hommes</option>
-            <option value="women">Des femmes</option>
-            <option value="couples">Des couples</option>
-            <option value="any">Tout le monde</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 13, color: '#9ca3af' }}>
             Rayon de recherche
           </label>
           <select
@@ -580,6 +658,63 @@ export default function ProfilesListPage() {
         </div>
       </div>
 
+      {/* Barre de match de groupe */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 16,
+          padding: '10px 12px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 10,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ fontSize: 13 }}>
+          <strong>Ménage de groupe</strong>
+          <p style={{ fontSize: 12, color: '#9ca3af' }}>
+            Sélectionne jusqu’à {MAX_GROUP_SIZE - 1} profils. Ils recevront une
+            proposition de tchat à plusieurs et pourront valider leur
+            participation.
+          </p>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 4,
+          }}
+        >
+          <p style={{ fontSize: 12, color: '#e5e7eb' }}>
+            Sélectionnés : {selectedProfileIds.length} / {MAX_GROUP_SIZE - 1}
+          </p>
+          <button
+            type="button"
+            disabled={
+              groupMatchLoading || selectedProfileIds.length === 0
+            }
+            onClick={handleCreateGroupMatch}
+          >
+            {groupMatchLoading
+              ? 'Création…'
+              : 'Proposer un match de groupe'}
+          </button>
+        </div>
+      </div>
+
+      {groupMatchError && (
+        <p style={{ color: 'tomato', marginBottom: 8, fontSize: 13 }}>
+          {groupMatchError}
+        </p>
+      )}
+      {groupMatchInfo && (
+        <p style={{ color: '#a3e635', marginBottom: 8, fontSize: 13 }}>
+          {groupMatchInfo}
+        </p>
+      )}
+
       {errorMsg && <p style={{ color: 'tomato' }}>{errorMsg}</p>}
 
       {profiles.length === 0 && !errorMsg && (
@@ -590,76 +725,100 @@ export default function ProfilesListPage() {
       )}
 
       <ul className="list-card">
-        {profiles.map((p) => (
-          <li key={p.id} className="list-card-item">
-            <Link
-              href={`/profiles/${p.id}`}
-              style={{ color: 'inherit', textDecoration: 'none' }}
-            >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                {p.main_photo_url ? (
-                  <img
-                    src={p.main_photo_url}
-                    alt={p.display_name || 'Photo de profil'}
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: '50%',
-                      backgroundColor: '#111827',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 20,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {(p.display_name || '?').charAt(0).toUpperCase()}
-                  </div>
-                )}
-
-                <div
+        {profiles.map((p) => {
+          const isSelected = selectedProfileIds.includes(p.id);
+          return (
+            <li key={p.id} className="list-card-item">
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Link
+                  href={`/profiles/${p.id}`}
                   style={{
+                    color: 'inherit',
+                    textDecoration: 'none',
                     flex: 1,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 8,
+                    gap: 12,
+                    alignItems: 'center',
                   }}
                 >
-                  <div>
-                    <strong>{p.display_name || 'Sans pseudo'}</strong>
-                    <div style={{ fontSize: 12, marginTop: 4 }}>
-                      {p.city || 'Ville ?'}
+                  {p.main_photo_url ? (
+                    <img
+                      src={p.main_photo_url}
+                      alt={p.display_name || 'Photo de profil'}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        backgroundColor: '#111827',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 20,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {(p.display_name || '?')
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
-                  </div>
-                  <div style={{ textAlign: 'right', fontSize: 11 }}>
-                    <div>Genre : {p.gender || '-'}</div>
-                    <div>Intention : {p.main_intent || '-'}</div>
+                  )}
+
+                  <div
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
                     <div>
-                      Cherche :{' '}
-                      {p.looking_for_gender === 'men'
-                        ? 'hommes'
-                        : p.looking_for_gender === 'women'
-                        ? 'femmes'
-                        : p.looking_for_gender === 'couples'
-                        ? 'couples'
-                        : 'tout le monde'}
+                      <strong>{p.display_name || 'Sans pseudo'}</strong>
+                      <div style={{ fontSize: 12, marginTop: 4 }}>
+                        {p.city || 'Ville ?'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 11 }}>
+                      <div>Genre : {p.gender || '-'}</div>
+                      <div>Intention : {p.main_intent || '-'}</div>
                     </div>
                   </div>
-                </div>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSelectProfile(p.id)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: 11,
+                    backgroundImage: isSelected
+                      ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+                      : 'linear-gradient(135deg,#4b5563,#020617)',
+                    color: '#e5e7eb',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isSelected ? 'Sélectionné' : 'Ajouter au groupe'}
+                </button>
               </div>
-            </Link>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {/* Overlay Tornado */}
@@ -731,7 +890,6 @@ export default function ProfilesListPage() {
                 </p>
               )}
 
-            {/* Cartes en cours */}
             {!tornadoLoading &&
               tornadoRemaining > 0 &&
               tornadoProfiles.length > 0 &&
@@ -838,7 +996,6 @@ export default function ProfilesListPage() {
                 </>
               )}
 
-            {/* Bilan de session */}
             {hasSessionRecap && (
               <div
                 style={{

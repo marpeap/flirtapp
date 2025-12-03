@@ -5,18 +5,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
-export default function MessagesListPage() {
+export default function ConversationsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [items, setItems] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
-    async function loadConversations() {
+    async function load() {
       setLoading(true);
       setErrorMsg('');
 
-      // 1. Utilisateur connecté
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         setLoading(false);
@@ -24,105 +24,202 @@ export default function MessagesListPage() {
         return;
       }
 
-      const currentUserId = userData.user.id;
+      const userId = userData.user.id;
+      setCurrentUserId(userId);
 
-      // 2. Récupérer les conversations où il est user_id_1 ou user_id_2
-      const { data: convs, error: convError } = await supabase
-        .from('conversations')
-        .select('id, user_id_1, user_id_2, created_at, last_message_at')
-        .or(
-          `user_id_1.eq.${currentUserId},user_id_2.eq.${currentUserId}`
-        )
-        .order('last_message_at', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (convError) {
-        setErrorMsg(convError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!convs || convs.length === 0) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3. Identifier les "autres" utilisateurs pour chaque conversation
-      const otherUserIds = Array.from(
-        new Set(
-          convs.map((c) =>
-            c.user_id_1 === currentUserId ? c.user_id_2 : c.user_id_1
+      // Récupérer les conversations où l'utilisateur est participant actif
+      const { data: parts, error: partErr } = await supabase
+        .from('conversation_participants')
+        .select(
+          `
+          conversation_id,
+          conversations (
+            id,
+            is_group,
+            name,
+            user_id_1,
+            user_id_2
           )
+        `
         )
-      );
+        .eq('user_id', userId)
+        .eq('active', true);
 
-      // 4. Récupérer les profils correspondants
-      const { data: otherProfiles, error: profError } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, city')
-        .in('user_id', otherUserIds);
-
-      if (profError) {
-        setErrorMsg(profError.message);
+      if (partErr) {
+        setErrorMsg(partErr.message);
         setLoading(false);
         return;
       }
 
-      const profileByUserId = {};
-      (otherProfiles || []).forEach((p) => {
-        profileByUserId[p.user_id] = p;
+      const convs = parts
+        .map((p) => p.conversations)
+        .filter(Boolean);
+
+      // Charger les profils nécessaires pour nommer les 1‑à‑1
+      const otherUserIds = [];
+      convs.forEach((c) => {
+        if (!c.is_group) {
+          const other =
+            c.user_id_1 === userId ? c.user_id_2 : c.user_id_1;
+          if (other && !otherUserIds.includes(other)) {
+            otherUserIds.push(other);
+          }
+        }
       });
 
-      // 5. Construire la liste à afficher
-      const result = convs.map((c) => {
-        const otherId =
-          c.user_id_1 === currentUserId ? c.user_id_2 : c.user_id_1;
-        const otherProfile = profileByUserId[otherId] || {};
-        return {
-          conversationId: c.id,
-          displayName: otherProfile.display_name || 'Profil',
-          city: otherProfile.city || '',
-        };
+      let profilesByUserId = {};
+      if (otherUserIds.length > 0) {
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, main_photo_url, city')
+          .in('user_id', otherUserIds);
+
+        if (!profErr && profiles) {
+          profilesByUserId = profiles.reduce((acc, p) => {
+            acc[p.user_id] = p;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Pour les groupes, compter les membres
+      const groupIds = convs.filter((c) => c.is_group).map((c) => c.id);
+      let membersCountByConvId = {};
+      if (groupIds.length > 0) {
+        const { data: groupParts } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .in('conversation_id', groupIds)
+          .eq('active', true);
+
+        if (groupParts) {
+          groupParts.forEach((gp) => {
+            membersCountByConvId[gp.conversation_id] =
+              (membersCountByConvId[gp.conversation_id] || 0) + 1;
+          });
+        }
+      }
+
+      const enriched = convs.map((c) => {
+        if (c.is_group) {
+          return {
+            ...c,
+            displayName: c.name || 'Groupe CupidWave',
+            subtitle: `${membersCountByConvId[c.id] || 0} participant(s)`,
+            avatarLetter: 'G',
+          };
+        } else {
+          const other =
+            c.user_id_1 === userId ? c.user_id_2 : c.user_id_1;
+          const p = other ? profilesByUserId[other] : null;
+          const name = p?.display_name || 'Profil supprimé';
+          const city = p?.city || '';
+          return {
+            ...c,
+            displayName: name,
+            subtitle: city,
+            avatarLetter: name.charAt(0).toUpperCase(),
+            avatarUrl: p?.main_photo_url || null,
+          };
+        }
       });
 
-      setItems(result);
+      setConversations(enriched);
       setLoading(false);
     }
 
-    loadConversations();
+    load();
   }, [router]);
 
   if (loading) {
-    return <main style={{ color: 'white', padding: 24 }}>Chargement…</main>;
+    return <main>Chargement…</main>;
   }
 
   return (
-    <main style={{ color: 'white', padding: 24 }}>
-      <h1>Messages</h1>
+    <main>
+      <h1>Mes conversations</h1>
 
-      {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
-
-      {items.length === 0 && !errorMsg && (
-        <p>Aucune conversation pour le moment.</p>
+      {errorMsg && (
+        <p style={{ color: 'tomato', marginBottom: 12 }}>{errorMsg}</p>
       )}
 
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {items.map((item) => (
-          <li
-            key={item.conversationId}
-            style={{
-              border: '1px solid #444',
-              padding: 12,
-              marginBottom: 8,
-            }}
-          >
+      {conversations.length === 0 && !errorMsg && (
+        <p style={{ fontSize: 14 }}>
+          Tu n’as pas encore de conversation. Lance‑toi depuis les profils ou
+          crée bientôt un groupe.
+        </p>
+      )}
+
+      <ul className="list-card">
+        {conversations.map((c) => (
+          <li key={c.id} className="list-card-item">
             <Link
-              href={`/messages/${item.conversationId}`}
-              style={{ color: 'lightblue', textDecoration: 'none' }}
+              href={`/messages/${c.id}`}
+              style={{ color: 'inherit', textDecoration: 'none' }}
             >
-              <strong>{item.displayName}</strong>
-              {item.city ? ` — ${item.city}` : ''}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {c.avatarUrl ? (
+                  <img
+                    src={c.avatarUrl}
+                    alt={c.displayName}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      backgroundColor: '#111827',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {c.avatarLetter}
+                  </div>
+                )}
+
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
+                    <strong>{c.displayName}</strong>
+                    {c.is_group && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: '#facc15',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Groupe
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: '#9ca3af',
+                      marginTop: 2,
+                    }}
+                  >
+                    {c.subtitle}
+                  </p>
+                </div>
+              </div>
             </Link>
           </li>
         ))}

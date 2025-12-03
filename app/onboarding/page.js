@@ -2,97 +2,116 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
+import ProfileForm from './_components/ProfileForm';
+import MatchmakingQuestionnaire from '../profiles/[id]/_components/MatchmakingQuestionnaire';
+import { getRandomCupidAvatarPath } from '@/lib/cupidAvatars';
+
+const ADMIN_EMAIL = 'azajbs@gmail.com';
 
 export default function OnboardingPage() {
   const router = useRouter();
 
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
 
   const [userId, setUserId] = useState(null);
-  const [userEmail, setUserEmail] = useState('');
+  const [userEmail, setUserEmail] = useState(null);
+  const [profileId, setProfileId] = useState(null);
 
   const [displayName, setDisplayName] = useState('');
-  const [gender, setGender] = useState('');
-  const [genderLocked, setGenderLocked] = useState(false);
-  const [mainIntent, setMainIntent] = useState('');
   const [city, setCity] = useState('');
-  const [bio, setBio] = useState('');
+  const [gender, setGender] = useState('');
   const [lookingForGender, setLookingForGender] = useState('any');
-  const [existingPhotoUrl, setExistingPhotoUrl] = useState(null);
+  const [mainIntent, setMainIntent] = useState('');
+  const [bio, setBio] = useState('');
+  const [mainPhotoUrl, setMainPhotoUrl] = useState('');
 
-  const [avatarFile, setAvatarFile] = useState(null);
-
-  const [lat, setLat] = useState(null);
-  const [lng, setLng] = useState(null);
-  const [geoStatus, setGeoStatus] = useState('');
-  const [geoLoading, setGeoLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   useEffect(() => {
-    async function loadUserAndProfile() {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user) {
-        router.push('/login');
+    async function load() {
+      setLoading(true);
+      setErrorMsg('');
+      setInfoMsg('');
+
+      // 1) Récupérer l’utilisateur connecté (id + email) [web:624]
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setLoading(false);
+        router.replace('/login');
         return;
       }
-      const user = data.user;
-      setUserId(user.id);
-      setUserEmail(user.email || '');
-      setLoadingUser(false);
 
-      const { data: profile, error: profileError } = await supabase
+      setUserId(user.id);
+      setUserEmail(user.email || null);
+
+      // 2) Tenter de charger un profil existant [web:317]
+      const { data: prof, error: profErr } = await supabase
         .from('profiles')
         .select(
-          'id, display_name, gender, main_intent, city, bio, looking_for_gender, main_photo_url, lat, lng'
+          'id, user_id, display_name, city, gender, looking_for_gender, main_intent, bio, main_photo_url'
         )
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (profileError) {
-        setErrorMsg(profileError.message);
+      if (profErr) {
+        setErrorMsg(profErr.message);
+        setLoading(false);
         return;
       }
 
-      if (profile) {
-        setDisplayName(profile.display_name || '');
-        setGender(profile.gender || '');
-        setGenderLocked(!!profile.gender); // lock si déjà choisi
-        setMainIntent(profile.main_intent || '');
-        setCity(profile.city || '');
-        setBio(profile.bio || '');
-        setLookingForGender(profile.looking_for_gender || 'any');
-        setExistingPhotoUrl(profile.main_photo_url || null);
-        setLat(profile.lat);
-        setLng(profile.lng);
+      if (prof) {
+        // Profil existant
+        setProfileId(prof.id);
+        setDisplayName(prof.display_name || '');
+        setCity(prof.city || '');
+        setGender(prof.gender || '');
+        setLookingForGender(prof.looking_for_gender || 'any');
+        setMainIntent(prof.main_intent || '');
+        setBio(prof.bio || '');
+
+        if (prof.main_photo_url) {
+          setMainPhotoUrl(prof.main_photo_url);
+        } else {
+          // Pas encore de photo : avatar aléatoire
+          const randomAvatar = getRandomCupidAvatarPath();
+          setMainPhotoUrl(randomAvatar);
+
+          await supabase
+            .from('profiles')
+            .update({ main_photo_url: randomAvatar })
+            .eq('id', prof.id);
+        }
+      } else {
+        // 3) Aucun profil : création d’un profil minimal avec avatar aléatoire
+        const randomAvatar = getRandomCupidAvatarPath();
+        setMainPhotoUrl(randomAvatar);
+
+        const { data: newProf, error: newProfErr } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            main_photo_url: randomAvatar,
+          })
+          .select('id')
+          .single();
+
+        if (!newProfErr && newProf) {
+          setProfileId(newProf.id);
+        }
       }
+
+      setLoading(false);
     }
 
-    loadUserAndProfile();
+    load();
   }, [router]);
-
-  async function handleUseGeolocation() {
-    if (!navigator.geolocation) {
-      setGeoStatus("La géolocalisation n'est pas disponible sur cet appareil.");
-      return;
-    }
-    setGeoLoading(true);
-    setGeoStatus('Récupération de ta position…');
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude);
-        setLng(pos.coords.longitude);
-        setGeoLoading(false);
-        setGeoStatus('Position mise à jour ✔');
-      },
-      (err) => {
-        setGeoLoading(false);
-        setGeoStatus(`Échec de la géolocalisation : ${err.message}`);
-      }
-    );
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -100,346 +119,159 @@ export default function OnboardingPage() {
 
     setSaving(true);
     setErrorMsg('');
+    setInfoMsg('');
 
-    let main_photo_url = existingPhotoUrl;
-
-    if (avatarFile) {
-      const fileExt = avatarFile.name.split('.').pop();
-      const path = `avatars/${userId}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, avatarFile, {
-          upsert: true,
-        });
-
-      if (uploadError) {
-        setSaving(false);
-        setErrorMsg(uploadError.message);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(path);
-
-      main_photo_url = publicUrlData.publicUrl;
-    }
-
-    const profilePayload = {
+    const payload = {
+      id: profileId || undefined,
       user_id: userId,
       display_name: displayName || null,
-      gender: gender || null,
-      main_intent: mainIntent || null,
       city: city || null,
-      bio: bio || null,
+      gender: gender || null,
       looking_for_gender: lookingForGender || 'any',
-      main_photo_url: main_photo_url || null,
-      lat,
-      lng,
+      main_intent: mainIntent || null,
+      bio: bio || null,
+      main_photo_url: mainPhotoUrl || null,
     };
 
-    const { data: existing, error: existingError } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
-      .select('id, gender')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existingError) {
-      setSaving(false);
-      setErrorMsg(existingError.message);
-      return;
-    }
-
-    let dbError = null;
-
-    if (existing) {
-      // Si le genre est déjà défini, on garde celui en base (au cas où)
-      if (existing.gender && existing.gender !== gender) {
-        profilePayload.gender = existing.gender;
-      }
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(profilePayload)
-        .eq('user_id', userId);
-
-      dbError = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert(profilePayload);
-
-      dbError = insertError;
-    }
-
-    if (dbError) {
-      setSaving(false);
-      setErrorMsg(dbError.message);
-      return;
-    }
+      .upsert(payload)
+      .select('id')
+      .maybeSingle(); // upsert propre du profil [web:317]
 
     setSaving(false);
-    router.push('/profiles');
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
+    if (data?.id) {
+      setProfileId(data.id);
+    }
+    setInfoMsg('Profil enregistré. Tu peux maintenant profiter de CupidWave.');
   }
 
-  if (loadingUser) {
-    return <main>Chargement…</main>;
+  if (loading) {
+    return <main>Chargement de ton profil…</main>;
   }
+
+  const isAdmin = userEmail === ADMIN_EMAIL;
 
   return (
-    <main>
-      <form onSubmit={handleSubmit}>
-        {/* Bloc identité visuelle */}
-        <div
-          className="card"
+    <main
+      style={{
+        maxWidth: 720,
+        margin: '0 auto',
+        padding: '16px 12px 40px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 10,
+          alignItems: 'center',
+          marginBottom: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => router.push('/')}
           style={{
-            marginBottom: 20,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)',
-            gap: 18,
-            alignItems: 'center',
+            fontSize: 13,
+            padding: '4px 10px',
+            backgroundImage: 'linear-gradient(135deg,#4b5563,#020617)',
+            color: '#e5e7eb',
           }}
         >
-          <div
+          ← Retour à l’accueil
+        </button>
+
+        {isAdmin && (
+          <a
+            href="/admin"
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
+              fontSize: 12,
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid #4ade80',
+              backgroundColor: '#022c22',
+              color: '#bbf7d0',
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              letterSpacing: 0.04,
             }}
           >
-            <div
-              style={{
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                border: '2px solid #fb7185',
-                boxShadow: '0 0 0 3px rgba(251,113,133,0.25)',
-                overflow: 'hidden',
-                marginBottom: 10,
-                backgroundColor: '#020617',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 34,
-              }}
-            >
-              {existingPhotoUrl ? (
-                <img
-                  src={existingPhotoUrl}
-                  alt="Photo de profil"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <span>{(displayName || '🙂').charAt(0).toUpperCase()}</span>
-              )}
-            </div>
+            Accès Admin
+          </a>
+        )}
+      </div>
 
-            <label
-              style={{
-                fontSize: 13,
-                cursor: 'pointer',
-                color: '#fda4af',
-                textDecoration: 'underline',
-              }}
-            >
-              Changer / ajouter une photo
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  setAvatarFile(file || null);
-                }}
-                style={{ display: 'none' }}
-              />
-            </label>
-          </div>
+      <div className="card">
+        <h1 style={{ marginBottom: 6 }}>Mon profil</h1>
+        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
+          À la création du compte, un avatar CupidWave est choisi au hasard pour
+          représenter ton profil. Tu peux ensuite le remplacer par ta propre
+          photo et enrichir ton profil pour améliorer le matchmaking.
+        </p>
 
-          <div>
-            <h1>Mon profil CupidWave</h1>
-            <p
-              style={{
-                fontSize: 13,
-                color: '#9ca3af',
-                marginBottom: 12,
-              }}
-            >
-              Quelques infos suffisent pour que les autres sachent qui tu es et
-              ce que tu cherches. Tu peux tout modifier sauf ton genre une fois
-              choisi.
-            </p>
+        <ProfileForm
+          userId={userId}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          city={city}
+          setCity={setCity}
+          gender={gender}
+          setGender={setGender}
+          lookingForGender={lookingForGender}
+          setLookingForGender={setLookingForGender}
+          mainIntent={mainIntent}
+          setMainIntent={setMainIntent}
+          bio={bio}
+          setBio={setBio}
+          mainPhotoUrl={mainPhotoUrl}
+          setMainPhotoUrl={setMainPhotoUrl}
+          saving={saving}
+          onSubmit={handleSubmit}
+        />
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                gap: 10,
-              }}
-            >
-              <label style={{ fontSize: 13 }}>
-                Pseudo
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ton pseudo"
-                  style={{ marginTop: 4, width: '100%' }}
-                  required
-                />
-              </label>
-
-              <label style={{ fontSize: 13 }}>
-                Ville
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Où tu es basé·e"
-                  style={{ marginTop: 4, width: '100%' }}
-                />
-              </label>
-
-              <label style={{ fontSize: 13 }}>
-                Ton genre
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  required
-                  style={{ marginTop: 4, width: '100%' }}
-                  disabled={genderLocked}
-                >
-                  <option value="">Choisir…</option>
-                  <option value="man">Homme</option>
-                  <option value="woman">Femme</option>
-                  <option value="couple">Couple</option>
-                  <option value="other">Autre / je précise</option>
-                </select>
-              </label>
-
-              <label style={{ fontSize: 13 }}>
-                Tu cherches plutôt
-                <select
-                  value={lookingForGender}
-                  onChange={(e) => setLookingForGender(e.target.value)}
-                  style={{ marginTop: 4, width: '100%' }}
-                >
-                  <option value="any">Tout le monde</option>
-                  <option value="men">Des hommes</option>
-                  <option value="women">Des femmes</option>
-                  <option value="couples">Des couples</option>
-                </select>
-              </label>
-            </div>
-
-            {genderLocked && (
-              <p
-                style={{
-                  fontSize: 11,
-                  color: '#9ca3af',
-                  marginTop: 6,
-                }}
-              >
-                Pour garder la logique de matching cohérente, ton genre ne peut
-                plus être modifié. Si tu t’es trompé, contacte l’admin.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Bloc intentions + bio */}
-        <div
-          className="card"
-          style={{
-            marginBottom: 20,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1.2fr)',
-            gap: 18,
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ce que tu cherches</h2>
-            <label style={{ fontSize: 13, display: 'block', marginBottom: 10 }}>
-              Type de rencontres
-              <select
-                value={mainIntent}
-                onChange={(e) => setMainIntent(e.target.value)}
-                required
-                style={{ marginTop: 4, width: '100%' }}
-              >
-                <option value="">Choisir…</option>
-                <option value="friendly">Surtout amical</option>
-                <option value="sexy">Surtout charnel / coquin</option>
-                <option value="both">Un mélange des deux</option>
-              </select>
-            </label>
-
-            <p style={{ fontSize: 12, color: '#9ca3af' }}>
-              Ces infos aident CupidWave à suggérer des matchs cohérents avec
-              tes envies du moment.
-            </p>
-          </div>
-
-          <div>
-            <h2 style={{ fontSize: 16, marginBottom: 8 }}>Parle un peu de toi</h2>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={6}
-              placeholder="Tes envies, tes limites, ce que tu as envie de vivre ici…"
-              style={{ width: '100%', resize: 'vertical' }}
-            />
-          </div>
-        </div>
-
-        {/* Bloc géoloc */}
-        <div className="card" style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ta position approx.</h2>
-          <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
-            CupidWave utilise ta position pour trier les profils par proximité.
-            La ville seule peut suffire, mais la géolocalisation donne de
-            meilleurs résultats.
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              alignItems: 'center',
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleUseGeolocation}
-              disabled={geoLoading}
-            >
-              {geoLoading ? 'Recherche en cours…' : 'Utiliser ma position actuelle'}
-            </button>
-            {(lat != null || lng != null) && (
-              <span style={{ fontSize: 12, color: '#a3e635' }}>
-                Coordonnées enregistrées ✔
-              </span>
-            )}
-          </div>
-
-          {geoStatus && (
-            <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
-              {geoStatus}
-            </p>
-          )}
-        </div>
-
-        {/* Actions */}
         {errorMsg && (
-          <p style={{ color: 'tomato', marginBottom: 10 }}>{errorMsg}</p>
+          <p
+            style={{
+              color: 'tomato',
+              marginTop: 10,
+              fontSize: 13,
+            }}
+          >
+            {errorMsg}
+          </p>
+        )}
+        {infoMsg && (
+          <p
+            style={{
+              color: '#a3e635',
+              marginTop: 10,
+              fontSize: 13,
+            }}
+          >
+            {infoMsg}
+          </p>
         )}
 
-        <button type="submit" disabled={saving}>
-          {saving ? 'Enregistrement…' : 'Enregistrer mon profil'}
-        </button>
-      </form>
+        {userId && (
+          <div
+            style={{
+              marginTop: 18,
+              paddingTop: 10,
+              borderTop: '1px solid #1f2937',
+            }}
+          >
+            <MatchmakingQuestionnaire userId={userId} />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
