@@ -505,7 +505,7 @@ export default function ProfilesListPage() {
       const title =
         names.length > 0
           ? `Ménage avec ${names.join(', ')}`
-          : 'Match de groupe CupidWave';
+          : 'Match de groupe ManyLovr';
 
       const { data: propRow, error: propErr } = await supabase
         .from('group_match_proposals')
@@ -866,7 +866,7 @@ export default function ProfilesListPage() {
             <h2 style={{ fontSize: 18, marginBottom: 6 }}>Mode Tornado</h2>
             <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 10 }}>
               Swipe jusqu’à 10 profils par jour. Plus tard, un abonnement
-              CupidWave te permettra d’en voir davantage.
+              ManyLovr te permettra d'en voir davantage.
             </p>
 
             <p

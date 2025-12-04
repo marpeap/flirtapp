@@ -102,7 +102,7 @@ export default function Header() {
               ♥
             </span>
             <span style={{ fontWeight: 600, fontSize: 15 }}>
-              CupidWave
+              ManyLovr
             </span>
           </Link>
 

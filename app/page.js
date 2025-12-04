@@ -8,92 +8,112 @@ export default function HomePage() {
   return (
     <main
       style={{
-        minHeight: 'calc(100vh - 56px)',
-        backgroundImage:
-          'radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%)',
+        minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '32px 16px 48px',
+        padding: '48px 16px',
+        position: 'relative',
       }}
+      className="fade-in"
     >
+      {/* Effet de fond animé */}
       <div
         style={{
-          maxWidth: 1040,
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(circle at 30% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(244, 114, 182, 0.12) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: 1200,
           width: '100%',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)',
-          gap: 32,
+          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
+          gap: 48,
+          alignItems: 'center',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
-        {/* Bloc texte (gauche) */}
-        <section
-          style={{
-            padding: 24,
-            borderRadius: 24,
-            border: '1px solid rgba(148,163,184,0.35)',
-            background:
-              'linear-gradient(135deg,rgba(15,23,42,0.94),rgba(15,23,42,0.7))',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(18px)',
-          }}
-        >
-          <p
+        {/* Bloc texte principal (gauche) */}
+        <section className="card card-elevated" style={{ padding: '40px' }}>
+          <div
             style={{
-              fontSize: 12,
-              letterSpacing: 0.18,
-              textTransform: 'uppercase',
-              color: '#9ca3af',
-              marginBottom: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 12px',
+              borderRadius: '9999px',
+              background: 'rgba(168, 85, 247, 0.15)',
+              border: '1px solid rgba(168, 85, 247, 0.2)',
+              marginBottom: 20,
             }}
           >
-            Rencontres à plusieurs • vibes choisies
-          </p>
+            <span style={{ fontSize: 14 }}>💜</span>
+            <span
+              style={{
+                fontSize: 12,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                color: 'var(--color-primary-light)',
+                fontWeight: 600,
+              }}
+            >
+              Rencontres à plusieurs • Vibes choisies
+            </span>
+          </div>
 
           <h1
             style={{
-              fontSize: 32,
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
               lineHeight: 1.1,
-              marginBottom: 12,
+              marginBottom: 20,
+              fontWeight: 700,
             }}
           >
-            Rencontres qui respectent
+            <span className="text-gradient">
+              Rencontres qui respectent
+            </span>
             <br />
-            ton rythme et tes limites.
+            <span style={{ color: 'var(--color-text-primary)' }}>
+              ton rythme et tes limites
+            </span>
           </h1>
 
           <p
             style={{
-              fontSize: 14,
-              color: '#9ca3af',
-              maxWidth: 460,
-              marginBottom: 18,
+              fontSize: 18,
+              lineHeight: 1.7,
+              color: 'var(--color-text-secondary)',
+              maxWidth: 520,
+              marginBottom: 32,
             }}
           >
-            ManyLovr t’aide à créer des connexions en solo ou à plusieurs,
-            sans spam ni swipe infini. Tu poses ton cadre, tes envies, tes
-            groupes ; on s’occupe de te présenter les bonnes personnes.
+            ManyLovr t'aide à créer des connexions authentiques, en solo ou à
+            plusieurs, sans spam ni swipe infini. Tu poses ton cadre, tes envies,
+            tes groupes ; on s'occupe de te présenter les bonnes personnes.
           </p>
 
           <div
             style={{
               display: 'flex',
-              gap: 10,
+              gap: 12,
               flexWrap: 'wrap',
-              marginBottom: 16,
+              marginBottom: 32,
             }}
           >
             <button
               type="button"
               onClick={() => router.push('/onboarding')}
+              className="btn-primary"
               style={{
-                padding: '10px 18px',
-                borderRadius: 999,
-                border: 'none',
-                backgroundImage:
-                  'linear-gradient(135deg,#f97316,#fb7185)',
-                color: '#0b1120',
-                fontSize: 14,
+                padding: '14px 28px',
+                fontSize: 16,
                 fontWeight: 600,
               }}
             >
@@ -103,205 +123,202 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => router.push('/profiles')}
+              className="btn-outline"
               style={{
-                padding: '10px 18px',
-                borderRadius: 999,
-                border: '1px solid rgba(148,163,184,0.5)',
-                backgroundColor: 'rgba(15,23,42,0.6)',
-                color: '#e5e7eb',
-                fontSize: 14,
+                padding: '14px 28px',
+                fontSize: 16,
+                fontWeight: 500,
               }}
             >
-              Voir les profils
+              Explorer les profils
             </button>
           </div>
 
-          <ul
+          <div
             style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
               display: 'grid',
-              gap: 8,
-              fontSize: 12,
-              color: '#9ca3af',
+              gap: 12,
+              paddingTop: 24,
+              borderTop: '1px solid rgba(168, 85, 247, 0.15)',
             }}
           >
-            <li>• Groupes privés pour organiser des rencontres à plusieurs.</li>
-            <li>• Matchmaking guidé par ton style de vie et tes limites.</li>
-            <li>• Signalements, blocages et règles claires pour rester safe.</li>
-          </ul>
+            {[
+              {
+                icon: '👥',
+                text: 'Groupes privés pour organiser des rencontres à plusieurs',
+              },
+              {
+                icon: '🎯',
+                text: 'Matchmaking guidé par ton style de vie et tes limites',
+              },
+              {
+                icon: '🛡️',
+                text: 'Signalements, blocages et règles claires pour rester safe',
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
+                  {item.text}
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Bloc visuel (droite) */}
         <section
-          aria-hidden="true"
+          className="card"
           style={{
             position: 'relative',
-            borderRadius: 24,
-            overflow: 'hidden',
-            border: '1px solid rgba(55,65,81,0.7)',
+            padding: '32px',
             background:
-              'radial-gradient(circle at 10% 0%,rgba(248,113,113,0.28),transparent 55%),radial-gradient(circle at 90% 100%,rgba(251,113,133,0.24),transparent 55%),linear-gradient(135deg,#020617,#020617)',
+              'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.08))',
+            border: '1px solid rgba(168, 85, 247, 0.2)',
           }}
         >
           <div
             style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'radial-gradient(circle at 0 0,rgba(15,23,42,0.2),transparent 55%)',
-              mixBlendMode: 'soft-light',
-            }}
-          />
-
-          <div
-            style={{
-              position: 'relative',
-              height: '100%',
-              padding: 20,
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between',
+              gap: 24,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: 12,
-              }}
-            >
-              <div>
-                <p
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: '9999px',
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  marginBottom: 16,
+                }}
+              >
+                <span style={{ fontSize: 12 }}>✨</span>
+                <span
                   style={{
                     fontSize: 11,
-                    color: '#9ca3af',
-                    marginBottom: 4,
+                    color: 'var(--color-primary-light)',
+                    fontWeight: 500,
                   }}
                 >
                   En ce moment sur ManyLovr
-                </p>
-                <h2 style={{ fontSize: 18, marginBottom: 4 }}>
-                  Soirées, afterworks,
-                  <br />
-                  rencontres complices.
-                </h2>
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: '#9ca3af',
-                    maxWidth: 260,
-                  }}
-                >
-                  Rejoins des groupes affinitaires pour sortir, discuter,
-                  explorer à ton rythme. Pas d’algos opaques, pas de pression.
-                </p>
+                </span>
               </div>
-
-              <div
+              <h2
                 style={{
-                  display: 'grid',
-                  gap: 6,
-                  minWidth: 150,
-                  fontSize: 11,
+                  fontSize: 24,
+                  marginBottom: 12,
+                  fontWeight: 600,
+                  color: 'var(--color-text-primary)',
                 }}
               >
-                <div
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: 12,
-                    backgroundColor: 'rgba(15,23,42,0.9)',
-                    border: '1px solid rgba(55,65,81,0.9)',
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 11,
-                      color: '#e5e7eb',
-                    }}
-                  >
-                    Groupe [Soirée chill mixte]
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 10,
-                      color: '#9ca3af',
-                    }}
-                  >
-                    5 membres • Paris • ce week‑end
-                  </p>
-                </div>
+                Soirées, afterworks,
+                <br />
+                rencontres complices
+              </h2>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: 'var(--color-text-secondary)',
+                  lineHeight: 1.6,
+                }}
+              >
+                Rejoins des groupes affinitaires pour sortir, discuter, explorer à
+                ton rythme. Pas d'algos opaques, pas de pression.
+              </p>
+            </div>
 
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              {[
+                {
+                  title: 'Groupe [Soirée chill mixte]',
+                  details: '5 membres • Paris • ce week‑end',
+                  color: 'var(--color-primary)',
+                },
+                {
+                  title: 'Cercle [poly & queer friendly]',
+                  details: '8 membres • rencontres longues',
+                  color: 'var(--color-accent)',
+                },
+              ].map((group, idx) => (
                 <div
+                  key={idx}
+                  className="card"
                   style={{
-                    padding: '6px 8px',
-                    borderRadius: 12,
-                    backgroundColor: 'rgba(15,23,42,0.9)',
-                    border: '1px solid rgba(55,65,81,0.9)',
+                    padding: '14px 16px',
+                    border: `1px solid ${group.color}20`,
+                    background: `${group.color}08`,
                   }}
                 >
                   <p
                     style={{
                       margin: 0,
-                      fontSize: 11,
-                      color: '#e5e7eb',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--color-text-primary)',
+                      marginBottom: 4,
                     }}
                   >
-                    Cercle [poly & queer friendly]
+                    {group.title}
                   </p>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: 10,
-                      color: '#9ca3af',
+                      fontSize: 12,
+                      color: 'var(--color-text-muted)',
                     }}
                   >
-                    8 membres • rencontres longues
+                    {group.details}
                   </p>
                 </div>
-              </div>
+              ))}
             </div>
 
             <div
               style={{
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                gap: 12,
-                marginTop: 20,
+                flexDirection: 'column',
+                gap: 16,
+                paddingTop: 20,
+                borderTop: '1px solid rgba(168, 85, 247, 0.15)',
               }}
             >
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
+                  alignItems: 'flex-start',
+                  gap: 10,
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 30,
-                    height: 30,
-                    borderRadius: '999px',
-                    border: '1px solid rgba(248,250,252,0.7)',
-                    fontSize: 16,
-                  }}
-                >
-                  💬
-                </div>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>🛡️</span>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 11,
-                    color: '#9ca3af',
-                    maxWidth: 200,
+                    fontSize: 13,
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.5,
                   }}
                 >
                   Tu peux bloquer, signaler ou quitter un groupe à tout moment.
@@ -310,14 +327,33 @@ export default function HomePage() {
 
               <div
                 style={{
-                  fontSize: 11,
-                  color: '#94a3b8',
-                  textAlign: 'right',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
                 }}
               >
-                <p style={{ margin: 0 }}>Accès gratuit en bêta fermée.</p>
-                <p style={{ margin: 0 }}>
-                  L’app ne partage jamais ton identité réelle sans ton accord.
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: 'var(--color-success)',
+                  }}
+                >
+                  ✓ Accès gratuit en bêta fermée
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: 'var(--color-text-muted)',
+                  }}
+                >
+                  L'app ne partage jamais ton identité réelle sans ton accord.
                 </p>
               </div>
             </div>
@@ -327,4 +363,3 @@ export default function HomePage() {
     </main>
   );
 }
-

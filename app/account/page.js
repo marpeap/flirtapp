@@ -75,10 +75,31 @@ export default function AccountPage() {
     setErrorMsg('');
     setExportLoading(true);
 
+    // Récupérer toutes les conversations où l'utilisateur est participant
+    const { data: conversations, error: convError } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+
+    if (convError) {
+      setExportLoading(false);
+      setErrorMsg(convError.message);
+      return;
+    }
+
+    const conversationIds = (conversations || []).map((c) => c.id);
+
+    if (conversationIds.length === 0) {
+      setExportLoading(false);
+      setStatusMsg('Tu n\'as pas encore de messages à exporter.');
+      return;
+    }
+
+    // Récupérer tous les messages de ces conversations
     const { data: messages, error } = await supabase
       .from('messages')
       .select('*')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .in('conversation_id', conversationIds)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -93,7 +114,7 @@ export default function AccountPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'cupidwave-messages.json';
+    a.download = 'manylovr-messages.json';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -117,7 +138,7 @@ export default function AccountPage() {
     setErrorMsg('');
 
     const confirmDelete = window.confirm(
-      "Cette action va supprimer ton profil, tes réactions, tes conversations et messages sur CupidWave. Elle n'est pas réversible. Continuer ?"
+      "Cette action va supprimer ton profil, tes réactions, tes conversations et messages sur ManyLovr. Elle n'est pas réversible. Continuer ?"
     );
     if (!confirmDelete) return;
 
@@ -136,10 +157,23 @@ export default function AccountPage() {
       await supabase.from('reactions').delete().eq('to_profile_id', profileId);
     }
 
-    await supabase
-      .from('messages')
-      .delete()
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+    // Récupérer toutes les conversations de l'utilisateur pour supprimer les messages
+    const { data: userConversations } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+
+    const conversationIds = (userConversations || []).map((c) => c.id);
+
+    if (conversationIds.length > 0) {
+      await supabase
+        .from('messages')
+        .delete()
+        .in('conversation_id', conversationIds);
+    }
+
+    // Supprimer aussi les messages où l'utilisateur est l'expéditeur (au cas où)
+    await supabase.from('messages').delete().eq('sender_id', userId);
 
     await supabase
       .from('conversations')
@@ -176,7 +210,7 @@ export default function AccountPage() {
   return (
     <main>
       <div className="card" style={{ maxWidth: 640, margin: '0 auto' }}>
-        <h1>Mon compte CupidWave</h1>
+        <h1>Mon compte ManyLovr</h1>
         <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
           Connecté comme : {userEmail}
         </p>
@@ -284,7 +318,7 @@ export default function AccountPage() {
           <h2 style={{ fontSize: 16, marginBottom: 6 }}>Supprimer mon compte</h2>
           <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
             Cette action supprime ton profil, tes réactions, tes conversations
-            et tes messages sur CupidWave. Elle n’est pas réversible. Ton
+            et tes messages sur ManyLovr. Elle n'est pas réversible. Ton
             compte d’authentification sera ensuite nettoyé côté administrateur.
           </p>
           <button

@@ -104,7 +104,7 @@ export default function ConversationsPage() {
         if (c.is_group) {
           return {
             ...c,
-            displayName: c.name || 'Groupe CupidWave',
+            displayName: c.name || 'Groupe ManyLovr',
             subtitle: `${membersCountByConvId[c.id] || 0} participant(s)`,
             avatarLetter: 'G',
           };

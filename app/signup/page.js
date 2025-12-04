@@ -62,8 +62,8 @@ export default function SignUpPage() {
         }}
       >
         <Image
-          src="/background.png" // mets ici le nom exact de ton fichier dans /public
-          alt="Fond CupidWave"
+          src="/signup_bg.png"
+          alt="Fond ManyLovr"
           fill
           priority
           sizes="100vw"
@@ -92,7 +92,7 @@ export default function SignUpPage() {
           width: '100%',
         }}
       >
-        <h1>Créer mon compte CupidWave</h1>
+        <h1>Créer mon compte ManyLovr</h1>
         <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 14 }}>
           Un e‑mail et un mot de passe suffisent pour commencer. Tu pourras
           ensuite compléter ton profil et choisir le type de rencontres que tu

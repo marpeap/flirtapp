@@ -28,7 +28,7 @@ export default function Footer() {
         }}
       >
         <div>
-          <div>© {year} CupidWave</div>
+          <div>© {year} ManyLovr</div>
         <div>Fais en caleçon depuis mon PC</div>
           <div>Contact : Marpeap au 0649710370</div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function LoginPage() {
@@ -38,16 +39,58 @@ export default function LoginPage() {
   return (
     <main
       style={{
-        maxWidth: 420,
-        margin: '0 auto',
-        padding: '32px 16px 40px',
+        minHeight: '100vh',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 16px',
       }}
     >
-      <div className="card">
-        <h1 style={{ marginBottom: 8 }}>Connexion</h1>
-        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
-          Connecte‑toi pour continuer sur ManyLovr.
-        </p>
+      {/* Image de fond plein écran */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -2,
+        }}
+      >
+        <Image
+          src="/login-bg.png"
+          alt="Fond ManyLovr"
+          fill
+          priority
+          sizes="100vw"
+          style={{
+            objectFit: 'cover',
+          }}
+        />
+      </div>
+
+      {/* Overlay sombre léger pour garder le texte lisible */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background:
+            'radial-gradient(circle at top, rgba(15, 15, 35, 0.4), rgba(15, 15, 35, 0.85))',
+          zIndex: -1,
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: 420,
+          width: '100%',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div className="card">
+          <h1 style={{ marginBottom: 8 }}>Connexion</h1>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+            Connecte‑toi pour continuer sur ManyLovr.
+          </p>
 
         <form
           onSubmit={handleSubmit}
@@ -75,22 +118,31 @@ export default function LoginPage() {
             />
           </label>
 
-          <button type="submit" disabled={loading}>
+          <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: 8 }}>
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
 
+        <p style={{ fontSize: 13, marginTop: 12, textAlign: 'center' }}>
+          Tu n'as pas encore de compte ?{' '}
+          <a href="/signup" style={{ color: 'var(--color-primary-light)' }}>
+            Créer un compte
+          </a>
+        </p>
+
         {errorMsg && (
           <p
             style={{
-              marginTop: 8,
-              fontSize: 12,
-              color: 'tomato',
+              marginTop: 12,
+              fontSize: 13,
+              color: 'var(--color-error)',
+              textAlign: 'center',
             }}
           >
             {errorMsg}
           </p>
         )}
+        </div>
       </div>
     </main>
   );

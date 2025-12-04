@@ -59,20 +59,21 @@ export default function MainNav() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        backdropFilter: 'blur(10px)',
-        backgroundColor: 'rgba(15,23,42,0.92)',
-        borderBottom: '1px solid #1f2937',
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(15, 15, 35, 0.85)',
+        borderBottom: '1px solid rgba(168, 85, 247, 0.15)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
       }}
     >
       <nav
         style={{
-          maxWidth: 960,
+          maxWidth: 1200,
           margin: '0 auto',
-          padding: '10px 12px',
+          padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: 16,
           flexWrap: 'wrap',
         }}
       >
@@ -81,33 +82,41 @@ export default function MainNav() {
           href="/"
           style={{
             fontWeight: 700,
-            letterSpacing: 0.08,
-            textTransform: 'uppercase',
-            fontSize: 14,
+            letterSpacing: 0.5,
+            fontSize: 18,
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 10,
             textDecoration: 'none',
-            color: '#e5e7eb',
+            color: 'var(--color-text-primary)',
+            transition: 'all 0.25s ease',
           }}
+          className="fade-in"
         >
           <span
             style={{
-              width: 20,
-              height: 20,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
-              backgroundImage:
-                'radial-gradient(circle at 30% 30%, #f97316, #7c2d12)',
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 16px rgba(168, 85, 247, 0.4)',
             }}
-          />
-          <span>ManyLovr</span>
+          >
+            <span style={{ fontSize: 18 }}>💜</span>
+          </span>
+          <span className="text-gradient" style={{ fontSize: 18 }}>
+            ManyLovr
+          </span>
         </Link>
 
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 8,
             flexWrap: 'wrap',
           }}
         >
@@ -120,13 +129,33 @@ export default function MainNav() {
                 key={link.href}
                 href={link.href}
                 style={{
-                  fontSize: 13,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  border: active ? '1px solid #f97316' : '1px solid transparent',
-                  backgroundColor: active ? 'rgba(15,23,42,0.9)' : 'transparent',
-                  color: '#e5e7eb',
+                  fontSize: 14,
+                  padding: '8px 16px',
+                  borderRadius: '9999px',
+                  border: active
+                    ? '1px solid rgba(168, 85, 247, 0.4)'
+                    : '1px solid transparent',
+                  background: active
+                    ? 'rgba(168, 85, 247, 0.15)'
+                    : 'transparent',
+                  color: active
+                    ? 'var(--color-primary-light)'
+                    : 'var(--color-text-secondary)',
                   textDecoration: 'none',
+                  transition: 'all 0.25s ease',
+                  fontWeight: active ? 500 : 400,
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)';
+                    e.currentTarget.style.color = 'var(--color-primary-light)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }
                 }}
               >
                 {link.label}
@@ -139,34 +168,32 @@ export default function MainNav() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 12,
+                paddingLeft: 12,
+                borderLeft: '1px solid rgba(168, 85, 247, 0.2)',
               }}
             >
               <span
                 style={{
-                  fontSize: 11,
-                  color: '#9ca3af',
-                  maxWidth: 160,
+                  fontSize: 12,
+                  color: 'var(--color-text-muted)',
+                  maxWidth: 180,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
                 title={userEmail}
               >
-                Connecté : {userEmail}
+                {userEmail}
               </span>
               <button
                 type="button"
                 onClick={handleLogout}
                 disabled={signingOut}
+                className="btn-danger"
                 style={{
                   fontSize: 12,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  border: '1px solid #b91c1c',
-                  backgroundImage:
-                    'linear-gradient(135deg,#ef4444,#7f1d1d)',
-                  color: '#fef2f2',
+                  padding: '6px 14px',
                 }}
               >
                 {signingOut ? 'Déconnexion…' : 'Déconnexion'}
@@ -175,13 +202,10 @@ export default function MainNav() {
           ) : (
             <Link
               href="/login"
+              className="btn-primary"
               style={{
-                fontSize: 12,
-                padding: '4px 10px',
-                borderRadius: 999,
-                border: '1px solid #4ade80',
-                backgroundColor: '#022c22',
-                color: '#bbf7d0',
+                fontSize: 14,
+                padding: '8px 20px',
                 textDecoration: 'none',
               }}
             >

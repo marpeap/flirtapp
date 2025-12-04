@@ -35,8 +35,6 @@ export default function ConversationPage() {
         error: userError,
       } = await supabase.auth.getUser();
 
-      console.log('🔐 User:', user, 'Error:', userError);
-
       if (userError || !user) {
         setLoading(false);
         router.replace('/login');
@@ -52,12 +50,35 @@ export default function ConversationPage() {
         .eq('id', conversationId)
         .maybeSingle();
 
-      console.log('💬 Conversation:', conv, 'Error:', convErr);
-
       if (convErr || !conv) {
         setErrorMsg("Conversation introuvable. " + (convErr?.message || ''));
         setLoading(false);
         return;
+      }
+
+      // 3) Vérifier que l'utilisateur a accès à cette conversation
+      if (!conv.is_group) {
+        // Pour les conversations 1-à-1, vérifier que l'utilisateur est un des participants
+        if (conv.user_id_1 !== user.id && conv.user_id_2 !== user.id) {
+          setErrorMsg("Tu n'as pas accès à cette conversation.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        // Pour les groupes, vérifier via conversation_participants
+        const { data: participant } = await supabase
+          .from('conversation_participants')
+          .select('id')
+          .eq('conversation_id', conversationId)
+          .eq('user_id', user.id)
+          .eq('active', true)
+          .maybeSingle();
+
+        if (!participant) {
+          setErrorMsg("Tu n'as pas accès à cette conversation de groupe.");
+          setLoading(false);
+          return;
+        }
       }
 
       setConversation(conv);
@@ -71,11 +92,9 @@ export default function ConversationPage() {
       setLoadingMessages(true);
       const { data: msgs, error: msgErr } = await supabase
         .from('messages')
-        .select('id, sender_id, content, created_at')
+        .select('id, sender_id, content, image_url, created_at')
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
-
-      console.log('📨 Messages:', msgs, 'Error:', msgErr);
 
       if (msgErr) {
         setErrorMsg(msgErr.message);
@@ -110,10 +129,8 @@ export default function ConversationPage() {
         sender_id: userId,
         content: inputValue.trim(),
       })
-      .select('id, sender_id, content, created_at')
+      .select('id, sender_id, content, image_url, created_at')
       .single();
-
-    console.log('✉️ Insert message:', data, 'Error:', error);
 
     setSending(false);
 
@@ -187,9 +204,27 @@ export default function ConversationPage() {
                       textAlign: 'left',
                     }}
                   >
-                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                    {m.image_url && (
+                      <img
+                        src={m.image_url}
+                        alt="Image partagée"
+                        style={{
+                          maxWidth: '100%',
+                          borderRadius: 8,
+                          marginBottom: m.content ? 6 : 0,
+                        }}
+                      />
+                    )}
+                    {m.content && (
+                      <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                    )}
                     <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: '#9ca3af', textAlign: 'right' }}>
-                      {new Date(m.created_at).toLocaleString()}
+                      {new Date(m.created_at).toLocaleString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </p>
                   </div>
                 </div>
