@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import GroupMeetupsSection from './_components/GroupMeetupsSection';
 
 export default function ConversationPage() {
   const params = useParams();
@@ -59,10 +60,23 @@ export default function ConversationPage() {
       // 3) Vérifier que l'utilisateur a accès à cette conversation
       if (!conv.is_group) {
         // Pour les conversations 1-à-1, vérifier que l'utilisateur est un des participants
-        if (conv.user_id_1 !== user.id && conv.user_id_2 !== user.id) {
-          setErrorMsg("Tu n'as pas accès à cette conversation.");
-          setLoading(false);
-          return;
+        const hasAccess = conv.user_id_1 === user.id || conv.user_id_2 === user.id;
+        
+        if (!hasAccess) {
+          // Vérifier aussi dans conversation_participants (pour les nouvelles conversations)
+          const { data: participant } = await supabase
+            .from('conversation_participants')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .eq('user_id', user.id)
+            .eq('active', true)
+            .maybeSingle();
+
+          if (!participant) {
+            setErrorMsg("Tu n'as pas accès à cette conversation.");
+            setLoading(false);
+            return;
+          }
         }
       } else {
         // Pour les groupes, vérifier via conversation_participants
@@ -165,14 +179,26 @@ export default function ConversationPage() {
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '16px 12px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button
         type="button"
-        onClick={() => router.push('/profiles')}
-        style={{ fontSize: 13, padding: '4px 10px', backgroundImage: 'linear-gradient(135deg,#4b5563,#020617)', color: '#e5e7eb' }}
+        onClick={() => router.push('/messages')}
+        className="btn-outline"
+        style={{ fontSize: 13, padding: '6px 12px', alignSelf: 'flex-start' }}
       >
-        ← Retour aux profils
+        ← Retour aux conversations
       </button>
 
+      {/* Section rendez-vous pour les groupes */}
+      {conversation?.is_group && (
+        <GroupMeetupsSection
+          conversationId={conversation.id}
+          userId={userId}
+          isGroup={conversation.is_group}
+        />
+      )}
+
       <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
-        <h1 style={{ fontSize: 16, marginBottom: 8 }}>Conversation privée</h1>
+        <h1 style={{ fontSize: 16, marginBottom: 8 }}>
+          {conversation?.is_group ? conversation.name || 'Groupe ManyLovr' : 'Conversation privée'}
+        </h1>
 
         <div
           style={{

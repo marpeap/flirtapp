@@ -51,9 +51,24 @@ export default function ConversationsPage() {
         return;
       }
 
-      const convs = parts
+      let convs = parts
         .map((p) => p.conversations)
         .filter(Boolean);
+
+      // Fallback : récupérer aussi les conversations 1-à-1 qui n'ont pas d'entrée dans conversation_participants
+      // (pour les anciennes conversations créées avant la correction)
+      const { data: legacyConvs, error: legacyErr } = await supabase
+        .from('conversations')
+        .select('id, is_group, name, user_id_1, user_id_2')
+        .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`)
+        .eq('is_group', false);
+
+      if (!legacyErr && legacyConvs) {
+        // Filtrer celles qui ne sont pas déjà dans convs
+        const existingIds = new Set(convs.map((c) => c.id));
+        const newLegacy = legacyConvs.filter((c) => !existingIds.has(c.id));
+        convs = [...convs, ...newLegacy];
+      }
 
       // Charger les profils nécessaires pour nommer les 1‑à‑1
       const otherUserIds = [];

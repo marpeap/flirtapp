@@ -414,6 +414,7 @@ export default function ProfilesListPage() {
           .insert({
             user_id_1: currentUserId,
             user_id_2: otherUserId,
+            is_group: false,
           })
           .select('id')
           .single();
@@ -422,6 +423,20 @@ export default function ProfilesListPage() {
           continue;
         }
         conversationId = newConv.id;
+
+        // Créer les entrées dans conversation_participants pour les deux utilisateurs
+        await supabase.from('conversation_participants').insert([
+          {
+            conversation_id: conversationId,
+            user_id: currentUserId,
+            active: true,
+          },
+          {
+            conversation_id: conversationId,
+            user_id: otherUserId,
+            active: true,
+          },
+        ]);
       }
 
       const { data: msgRow, error: msgErr } = await supabase

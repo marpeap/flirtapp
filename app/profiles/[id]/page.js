@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import GroupInvitesSection from './_components/GroupInvitesSection';
 import MatchmakingQuestionnaire from './_components/MatchmakingQuestionnaire';
+import MeetupReminders from '../../onboarding/_components/MeetupReminders';
 
 const REACTION_LEVELS = [
   { level: 1, emoji: '😐', label: 'Bof' },
@@ -223,6 +224,7 @@ export default function ProfileDetailPage() {
         .insert({
           user_id_1: userId,
           user_id_2: otherUserId,
+          is_group: false,
         })
         .select('id')
         .single();
@@ -233,6 +235,27 @@ export default function ProfileDetailPage() {
         return;
       }
       conversationId = newConv.id;
+
+      // Créer les entrées dans conversation_participants pour les deux utilisateurs
+      const { error: partError } = await supabase
+        .from('conversation_participants')
+        .insert([
+          {
+            conversation_id: conversationId,
+            user_id: userId,
+            active: true,
+          },
+          {
+            conversation_id: conversationId,
+            user_id: otherUserId,
+            active: true,
+          },
+        ]);
+
+      if (partError) {
+        console.error('Erreur lors de la création des participants:', partError);
+        // On continue quand même car la conversation existe
+      }
     }
 
     setContactLoading(false);
@@ -416,7 +439,12 @@ export default function ProfileDetailPage() {
           </p>
 
           {isOwnProfile && (
-            <MatchmakingQuestionnaire userId={currentUserId} />
+            <>
+              <MatchmakingQuestionnaire userId={currentUserId} />
+              <div style={{ marginTop: 20 }}>
+                <MeetupReminders userId={currentUserId} />
+              </div>
+            </>
           )}
         </div>
 

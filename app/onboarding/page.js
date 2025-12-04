@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ProfileForm from './_components/ProfileForm';
 import MatchmakingQuestionnaire from '../profiles/[id]/_components/MatchmakingQuestionnaire';
+import MeetupReminders from './_components/MeetupReminders';
 import { getRandomCupidAvatarPath } from '@/lib/cupidAvatars';
 
 const ADMIN_EMAIL = 'azajbs@gmail.com';
@@ -261,10 +262,22 @@ export default function OnboardingPage() {
             style={{
               marginTop: 18,
               paddingTop: 10,
-              borderTop: '1px solid #1f2937',
+              borderTop: '1px solid rgba(168, 85, 247, 0.15)',
             }}
           >
             <MatchmakingQuestionnaire userId={userId} />
+          </div>
+        )}
+
+        {userId && (
+          <div
+            style={{
+              marginTop: 18,
+              paddingTop: 10,
+              borderTop: '1px solid rgba(168, 85, 247, 0.15)',
+            }}
+          >
+            <MeetupReminders userId={userId} />
           </div>
         )}
       </div>
