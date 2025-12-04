@@ -113,11 +113,13 @@ main {
   min-height: calc(100vh - 80px);
   margin: 0 auto;
   padding: var(--spacing-lg) var(--spacing-md);
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
   main {
     padding: var(--spacing-md) var(--spacing-sm);
+    min-height: calc(100vh - 70px);
   }
 }
 
@@ -443,14 +445,145 @@ label {
   animation: fadeIn var(--transition-base) ease-out;
 }
 
-/* Responsive */
+/* ===========================
+   Responsive - Mobile First
+   =========================== */
+
+/* Tablettes et petits écrans */
+@media (max-width: 1024px) {
+  main {
+    max-width: 100%;
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+}
+
+/* Smartphones */
 @media (max-width: 768px) {
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.75rem; }
-  h3 { font-size: 1.25rem; }
+  /* Typographie réduite */
+  h1 { 
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
+    line-height: 1.2;
+  }
+  h2 { 
+    font-size: clamp(1.5rem, 6vw, 2rem);
+  }
+  h3 { 
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+  }
+  h4 { 
+    font-size: clamp(1.1rem, 4vw, 1.25rem);
+  }
   
+  /* Layout principal */
+  main {
+    padding: var(--spacing-md) var(--spacing-sm);
+    min-height: calc(100vh - 70px);
+  }
+  
+  /* Cartes */
   .card {
     padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+  }
+  
+  .card-elevated {
+    padding: var(--spacing-md);
+  }
+  
+  /* Boutons */
+  button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 14px;
+    min-height: 44px; /* Taille tactile recommandée */
+  }
+  
+  /* Formulaires */
+  input,
+  select,
+  textarea {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 16px; /* Évite le zoom sur iOS */
+    min-height: 44px;
+  }
+  
+  /* Listes */
+  .list-card-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  /* Badges */
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
+
+/* Très petits smartphones */
+@media (max-width: 480px) {
+  main {
+    padding: var(--spacing-sm);
+  }
+  
+  .card {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  h1 { 
+    font-size: 1.5rem;
+  }
+  h2 { 
+    font-size: 1.25rem;
+  }
+  
+  button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Grilles en colonne unique */
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: var(--spacing-md) !important;
+  }
+}
+
+/* Classe utilitaire pour les grilles responsive */
+.grid-responsive {
+  display: grid;
+}
+
+@media (max-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: var(--spacing-lg) !important;
+  }
+}
+
+/* Mode paysage sur mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  main {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Amélioration du touch target */
+@media (hover: none) and (pointer: coarse) {
+  /* Sur les appareils tactiles */
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Espacement entre les éléments cliquables */
+  .list-card-item {
+    margin-bottom: var(--spacing-sm);
   }
 }
 

@@ -10,6 +10,11 @@ export const metadata = {
   description:
     "ManyLovr est une app de rencontres pensée pour les connexions à plusieurs, les groupes affinitaires et les rencontres qualitatives.",
   metadataBase: new URL('https://manylovr.com'),
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
 };
 
 export default function RootLayout({ children }) {

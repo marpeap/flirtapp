@@ -827,23 +827,25 @@ export default function ProfilesListPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.75)',
+            backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 60,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 16,
+            padding: 'clamp(12px, 3vw, 16px)',
+            overflowY: 'auto',
           }}
         >
           <div
             className="card"
             style={{
-              maxWidth: 460,
+              maxWidth: 'min(460px, 100%)',
               width: '100%',
-              maxHeight: '90vh',
+              maxHeight: '95vh',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
+              margin: 'auto',
             }}
           >
             <button
@@ -851,13 +853,15 @@ export default function ProfilesListPage() {
               onClick={closeTornado}
               style={{
                 position: 'absolute',
-                top: 8,
-                right: 8,
-                padding: '4px 10px',
-                fontSize: 12,
+                top: 'clamp(8px, 2vw, 12px)',
+                right: 'clamp(8px, 2vw, 12px)',
+                padding: '8px 12px',
+                fontSize: 'clamp(12px, 2.5vw, 14px)',
                 backgroundImage:
                   'linear-gradient(135deg, #6b7280, #111827)',
                 color: '#e5e7eb',
+                minHeight: '36px',
+                zIndex: 10,
               }}
             >
               Fermer
@@ -1093,23 +1097,25 @@ export default function ProfilesListPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.75)',
+            backgroundColor: 'rgba(0,0,0,0.85)',
             zIndex: 60,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 16,
+            padding: 'clamp(12px, 3vw, 16px)',
+            overflowY: 'auto',
           }}
         >
           <div
             className="card"
             style={{
-              maxWidth: 420,
+              maxWidth: 'min(420px, 100%)',
               width: '100%',
-              maxHeight: '90vh',
+              maxHeight: '95vh',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
+              margin: 'auto',
             }}
           >
             <button
@@ -1117,13 +1123,15 @@ export default function ProfilesListPage() {
               onClick={closePush}
               style={{
                 position: 'absolute',
-                top: 8,
-                right: 8,
-                padding: '4px 10px',
-                fontSize: 12,
+                top: 'clamp(8px, 2vw, 12px)',
+                right: 'clamp(8px, 2vw, 12px)',
+                padding: '8px 12px',
+                fontSize: 'clamp(12px, 2.5vw, 14px)',
                 backgroundImage:
                   'linear-gradient(135deg, #6b7280, #111827)',
                 color: '#e5e7eb',
+                minHeight: '36px',
+                zIndex: 10,
               }}
               disabled={pushSending}
             >

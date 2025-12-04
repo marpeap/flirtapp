@@ -69,11 +69,11 @@ export default function MainNav() {
         style={{
           maxWidth: 1200,
           margin: '0 auto',
-          padding: '12px 16px',
+          padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 16,
+          gap: 12,
           flexWrap: 'wrap',
         }}
       >
@@ -129,8 +129,8 @@ export default function MainNav() {
                 key={link.href}
                 href={link.href}
                 style={{
-                  fontSize: 14,
-                  padding: '8px 16px',
+                  fontSize: 'clamp(12px, 2.5vw, 14px)',
+                  padding: '6px 12px',
                   borderRadius: '9999px',
                   border: active
                     ? '1px solid rgba(168, 85, 247, 0.4)'
@@ -144,6 +144,9 @@ export default function MainNav() {
                   textDecoration: 'none',
                   transition: 'all 0.25s ease',
                   fontWeight: active ? 500 : 400,
+                  minHeight: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
@@ -168,16 +171,17 @@ export default function MainNav() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                paddingLeft: 12,
+                gap: 8,
+                paddingLeft: 8,
                 borderLeft: '1px solid rgba(168, 85, 247, 0.2)',
+                flexWrap: 'wrap',
               }}
             >
               <span
                 style={{
-                  fontSize: 12,
+                  fontSize: 'clamp(10px, 2vw, 12px)',
                   color: 'var(--color-text-muted)',
-                  maxWidth: 180,
+                  maxWidth: 'clamp(100px, 20vw, 180px)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -192,8 +196,9 @@ export default function MainNav() {
                 disabled={signingOut}
                 className="btn-danger"
                 style={{
-                  fontSize: 12,
-                  padding: '6px 14px',
+                  fontSize: 'clamp(11px, 2.5vw, 12px)',
+                  padding: '6px 12px',
+                  minHeight: '36px',
                 }}
               >
                 {signingOut ? 'Déconnexion…' : 'Déconnexion'}
@@ -204,9 +209,12 @@ export default function MainNav() {
               href="/login"
               className="btn-primary"
               style={{
-                fontSize: 14,
-                padding: '8px 20px',
+                fontSize: 'clamp(12px, 2.5vw, 14px)',
+                padding: '6px 16px',
                 textDecoration: 'none',
+                minHeight: '36px',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               Connexion

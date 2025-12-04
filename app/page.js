@@ -39,9 +39,10 @@ export default function HomePage() {
           position: 'relative',
           zIndex: 1,
         }}
+        className="grid-responsive"
       >
         {/* Bloc texte principal (gauche) */}
-        <section className="card card-elevated" style={{ padding: '40px' }}>
+        <section className="card card-elevated" style={{ padding: 'clamp(24px, 5vw, 40px)' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -70,9 +71,9 @@ export default function HomePage() {
 
           <h1
             style={{
-              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-              lineHeight: 1.1,
-              marginBottom: 20,
+              fontSize: 'clamp(1.75rem, 8vw, 3.5rem)',
+              lineHeight: 1.2,
+              marginBottom: 'clamp(16px, 4vw, 20px)',
               fontWeight: 700,
             }}
           >
@@ -87,11 +88,11 @@ export default function HomePage() {
 
           <p
             style={{
-              fontSize: 18,
+              fontSize: 'clamp(14px, 3vw, 18px)',
               lineHeight: 1.7,
               color: 'var(--color-text-secondary)',
               maxWidth: 520,
-              marginBottom: 32,
+              marginBottom: 'clamp(20px, 4vw, 32px)',
             }}
           >
             ManyLovr t'aide à créer des connexions authentiques, en solo ou à
@@ -104,7 +105,7 @@ export default function HomePage() {
               display: 'flex',
               gap: 12,
               flexWrap: 'wrap',
-              marginBottom: 32,
+              marginBottom: 'clamp(20px, 4vw, 32px)',
             }}
           >
             <button
@@ -112,9 +113,11 @@ export default function HomePage() {
               onClick={() => router.push('/onboarding')}
               className="btn-primary"
               style={{
-                padding: '14px 28px',
-                fontSize: 16,
+                padding: 'clamp(12px, 3vw, 14px) clamp(20px, 4vw, 28px)',
+                fontSize: 'clamp(14px, 3vw, 16px)',
                 fontWeight: 600,
+                flex: '1 1 auto',
+                minWidth: '140px',
               }}
             >
               Créer mon profil
@@ -125,9 +128,11 @@ export default function HomePage() {
               onClick={() => router.push('/profiles')}
               className="btn-outline"
               style={{
-                padding: '14px 28px',
-                fontSize: 16,
+                padding: 'clamp(12px, 3vw, 14px) clamp(20px, 4vw, 28px)',
+                fontSize: 'clamp(14px, 3vw, 16px)',
                 fontWeight: 500,
+                flex: '1 1 auto',
+                minWidth: '140px',
               }}
             >
               Explorer les profils
@@ -185,7 +190,7 @@ export default function HomePage() {
           className="card"
           style={{
             position: 'relative',
-            padding: '32px',
+            padding: 'clamp(20px, 4vw, 32px)',
             background:
               'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.08))',
             border: '1px solid rgba(168, 85, 247, 0.2)',
