@@ -1,9 +1,10 @@
 'use client';
 
-import ProfilePhotoUploader from './ProfilePhotoUploader';
+import MultiPhotoUploader from './MultiPhotoUploader';
 
 export default function ProfileForm({
   userId,
+  profileId,
   displayName,
   setDisplayName,
   city,
@@ -31,11 +32,17 @@ export default function ProfileForm({
       }}
     >
       <label style={{ fontSize: 13 }}>
-        Photo de profil
-        <ProfilePhotoUploader
+        Photos de profil (jusqu'à 5)
+        <MultiPhotoUploader
           userId={userId}
-          mainPhotoUrl={mainPhotoUrl}
-          onPhotoChange={setMainPhotoUrl}
+          profileId={profileId}
+          onPhotosChange={(photos) => {
+            // Mettre à jour mainPhotoUrl avec la photo principale
+            const mainPhoto = photos.find(p => p.is_main);
+            if (mainPhoto) {
+              setMainPhotoUrl(mainPhoto.photo_url);
+            }
+          }}
         />
       </label>
       <label style={{ fontSize: 13 }}>

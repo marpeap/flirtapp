@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import GroupInvitesSection from './_components/GroupInvitesSection';
 import MatchmakingQuestionnaire from './_components/MatchmakingQuestionnaire';
 import MeetupReminders from '../../onboarding/_components/MeetupReminders';
+import CupidProfileCard from './_components/CupidProfileCard';
 
 const REACTION_LEVELS = [
   { level: 1, emoji: '😐', label: 'Bof' },
@@ -57,6 +58,7 @@ export default function ProfileDetailPage() {
   const profileId = params.id;
 
   const [profile, setProfile] = useState(null);
+  const [profilePhotos, setProfilePhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -102,6 +104,29 @@ export default function ProfileDetailPage() {
         )
         .eq('id', profileId)
         .maybeSingle();
+
+      // 3) Charger les photos du profil
+      const { data: photosData, error: photosError } = await supabase
+        .from('profile_photos')
+        .select('id, photo_url, is_main, display_order')
+        .eq('profile_id', profileId)
+        .order('display_order', { ascending: true });
+
+      if (!photosError && photosData) {
+        setProfilePhotos(photosData);
+      } else {
+        // Fallback : si pas de photos dans profile_photos, utiliser main_photo_url
+        if (profileData?.main_photo_url) {
+          setProfilePhotos([{
+            id: 'fallback',
+            photo_url: profileData.main_photo_url,
+            is_main: true,
+            display_order: 0,
+          }]);
+        } else {
+          setProfilePhotos([]);
+        }
+      }
 
       if (profileError || !profileData) {
         setErrorMsg(profileError?.message || 'Profil introuvable.');
@@ -413,34 +438,82 @@ export default function ProfileDetailPage() {
             textAlign: 'center',
           }}
         >
-          {profile.main_photo_url && (
-            <img
-              src={profile.main_photo_url}
-              alt={profile.display_name || 'Photo de profil'}
-              style={{
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                marginBottom: 12,
-                border: '2px solid #f97316',
-                boxShadow: '0 0 0 3px rgba(249,115,22,0.25)',
-              }}
-            />
+          {/* Photo principale agrandie */}
+          {profilePhotos.length > 0 && (
+            <div style={{ marginBottom: 20, width: '100%' }}>
+              <img
+                src={profilePhotos.find(p => p.is_main)?.photo_url || profilePhotos[0]?.photo_url || profile.main_photo_url}
+                alt={profile.display_name || 'Photo de profil'}
+                style={{
+                  width: '100%',
+                  maxWidth: 400,
+                  height: 'auto',
+                  aspectRatio: '4/5',
+                  borderRadius: 20,
+                  objectFit: 'cover',
+                  border: '2px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-lg)',
+                }}
+              />
+            </div>
           )}
-          <h1 style={{ marginBottom: 6 }}>
+
+          {/* Galerie de photos (si plusieurs) */}
+          {profilePhotos.length > 1 && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${Math.min(profilePhotos.length, 4)}, 1fr)`,
+                gap: 8,
+                width: '100%',
+                marginBottom: 20,
+              }}
+            >
+              {profilePhotos.slice(0, 4).map((photo) => (
+                <img
+                  key={photo.id}
+                  src={photo.photo_url}
+                  alt={`Photo ${photo.display_order + 1}`}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1',
+                    borderRadius: 12,
+                    objectFit: 'cover',
+                    border: photo.is_main
+                      ? '2px solid var(--color-primary)'
+                      : '1px solid var(--color-border)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.borderColor = photo.is_main
+                      ? 'var(--color-primary)'
+                      : 'var(--color-border)';
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          <h1 style={{ marginBottom: 6, fontSize: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
             {profile.display_name || 'Sans pseudo'}
           </h1>
-          <p style={{ fontSize: 13, color: '#9ca3af' }}>
+          <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
             {profile.city || 'Ville ?'} • {profile.gender || 'Genre ?'}
           </p>
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
             Intention : {profile.main_intent || 'Non précisée'}
           </p>
 
           {isOwnProfile && (
             <>
               <MatchmakingQuestionnaire userId={currentUserId} />
+              <CupidProfileCard userId={currentUserId} profileId={profile?.id} />
               <div style={{ marginTop: 20 }}>
                 <MeetupReminders userId={currentUserId} />
               </div>

@@ -19,6 +19,7 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
   useEffect(() => {
     if (!conversationId || !isGroup) return;
     loadMeetups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, isGroup]);
 
   async function loadMeetups() {
@@ -48,7 +49,14 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
       .order('created_at', { ascending: false });
 
     if (error) {
-      setErrorMsg(error.message);
+      // Si les tables n'existent pas encore, afficher un message clair
+      if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+        setErrorMsg(
+          'Les tables de rendez-vous ne sont pas encore configurées. Exécute le SQL_MEETUPS_RENDEZVOUS.sql dans Supabase.'
+        );
+      } else {
+        setErrorMsg(error.message);
+      }
       setMeetups([]);
     } else {
       // Trier : confirmés en premier, puis par date

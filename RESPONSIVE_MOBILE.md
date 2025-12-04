@@ -98,3 +98,4 @@ Grille qui passe automatiquement en colonne unique sur mobile :
 3. Lazy loading des images sur mobile
 4. Optimisation des images pour mobile (WebP, tailles réduites)
 
+

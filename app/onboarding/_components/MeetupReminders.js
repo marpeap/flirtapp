@@ -10,12 +10,27 @@ export default function MeetupReminders({ userId }) {
 
   useEffect(() => {
     if (!userId) return;
-    loadReminders();
+    let isMounted = true;
+    setLoading(true);
+
+    async function load() {
+      const result = await loadReminders();
+      if (isMounted) {
+        setReminders(result);
+        setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   async function loadReminders() {
-    if (!userId) return;
-    setLoading(true);
+    if (!userId) return [];
 
     // Récupérer les rendez-vous confirmés à venir où l'utilisateur est participant
     const { data, error } = await supabase
@@ -39,32 +54,29 @@ export default function MeetupReminders({ userId }) {
       .order('confirmed_date', { ascending: true });
 
     if (error) {
-      console.error('Erreur chargement reminders:', error);
-      setReminders([]);
-    } else {
-      // Filtrer pour ne garder que ceux où l'utilisateur est participant actif
-      const conversationIds = (data || []).map((m) => m.conversation_id);
-      
-      if (conversationIds.length > 0) {
-        const { data: participants } = await supabase
-          .from('conversation_participants')
-          .select('conversation_id')
-          .in('conversation_id', conversationIds)
-          .eq('user_id', userId)
-          .eq('active', true);
-
-        const myConversationIds = new Set(
-          (participants || []).map((p) => p.conversation_id)
-        );
-
-        setReminders(
-          (data || []).filter((m) => myConversationIds.has(m.conversation_id))
-        );
-      } else {
-        setReminders([]);
-      }
+      // Si les tables n'existent pas, retourner un tableau vide silencieusement
+      return [];
     }
-    setLoading(false);
+
+    // Filtrer pour ne garder que ceux où l'utilisateur est participant actif
+    const conversationIds = (data || []).map((m) => m.conversation_id);
+    
+    if (conversationIds.length === 0) {
+      return [];
+    }
+
+    const { data: participants } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .in('conversation_id', conversationIds)
+      .eq('user_id', userId)
+      .eq('active', true);
+
+    const myConversationIds = new Set(
+      (participants || []).map((p) => p.conversation_id)
+    );
+
+    return (data || []).filter((m) => myConversationIds.has(m.conversation_id));
   }
 
   if (!userId) return null;
@@ -203,4 +215,5 @@ export default function MeetupReminders({ userId }) {
     </section>
   );
 }
+
 

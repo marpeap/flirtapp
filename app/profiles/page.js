@@ -377,14 +377,12 @@ export default function ProfilesListPage() {
     for (const p of candidates) {
       const otherUserId = p.user_id;
 
+      // Vérifier s'il existe un blocage entre currentUserId et otherUserId
       const { data: blocks, error: blockErr } = await supabase
         .from('blocks')
         .select('id')
         .or(
-          `blocker_id.eq.${currentUserId},blocked_id.eq.${currentUserId}`
-        )
-        .or(
-          `blocker_id.eq.${otherUserId},blocked_id.eq.${otherUserId}`
+          `and(blocker_id.eq.${currentUserId},blocked_id.eq.${otherUserId}),and(blocker_id.eq.${otherUserId},blocked_id.eq.${currentUserId})`
         );
 
       if (!blockErr && blocks && blocks.length > 0) {
@@ -425,18 +423,25 @@ export default function ProfilesListPage() {
         conversationId = newConv.id;
 
         // Créer les entrées dans conversation_participants pour les deux utilisateurs
-        await supabase.from('conversation_participants').insert([
-          {
-            conversation_id: conversationId,
-            user_id: currentUserId,
-            active: true,
-          },
-          {
-            conversation_id: conversationId,
-            user_id: otherUserId,
-            active: true,
-          },
-        ]);
+        const { error: partError } = await supabase
+          .from('conversation_participants')
+          .insert([
+            {
+              conversation_id: conversationId,
+              user_id: currentUserId,
+              active: true,
+            },
+            {
+              conversation_id: conversationId,
+              user_id: otherUserId,
+              active: true,
+            },
+          ]);
+
+        if (partError) {
+          console.error('Erreur création participants Push Éclair:', partError);
+          // On continue quand même car la conversation existe
+        }
       }
 
       const { data: msgRow, error: msgErr } = await supabase

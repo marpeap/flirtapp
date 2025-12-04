@@ -138,3 +138,4 @@ Assure-toi que les utilisateurs authentifiés peuvent :
 - Les contre-propositions peuvent être multiples (chaque participant peut proposer)
 - Le créateur peut accepter n'importe quelle contre-proposition
 
+

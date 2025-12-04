@@ -19,6 +19,17 @@ export default function AdminPage() {
   });
   const [latestProfiles, setLatestProfiles] = useState([]);
 
+  // Gestion des crédits Push Éclair
+  const [pushEclairSection, setPushEclairSection] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [creditsToAdd, setCreditsToAdd] = useState(1);
+  const [creditsAction, setCreditsAction] = useState('add'); // 'add' ou 'set'
+  const [creditsLoading, setCreditsLoading] = useState(false);
+  const [creditsMessage, setCreditsMessage] = useState('');
+
   useEffect(() => {
     async function init() {
       setLoading(true);
@@ -57,7 +68,7 @@ export default function AdminPage() {
             .select('id', { count: 'exact', head: true }),
           supabase
             .from('profiles')
-            .select('id, display_name, city, gender, main_intent, created_at')
+            .select('id, display_name, city, gender, main_intent, created_at, push_eclair_credits')
             .order('created_at', { ascending: false })
             .limit(10),
         ]);
@@ -83,6 +94,100 @@ export default function AdminPage() {
 
     init();
   }, [router]);
+
+  async function handleSearchUsers() {
+    if (!searchQuery.trim()) return;
+
+    setSearchLoading(true);
+    setSearchResults([]);
+    setSelectedProfile(null);
+    setCreditsMessage('');
+
+    try {
+      const query = searchQuery.trim();
+      
+      // Rechercher par display_name
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, city, push_eclair_credits, user_id')
+        .ilike('display_name', `%${query}%`)
+        .limit(20);
+
+      if (error) {
+        setCreditsMessage('Erreur : ' + error.message);
+        setSearchLoading(false);
+        return;
+      }
+
+      setSearchResults(profiles || []);
+      
+      if ((profiles || []).length === 0) {
+        setCreditsMessage('Aucun profil trouvé avec ce pseudo.');
+      }
+    } catch (err) {
+      setCreditsMessage('Erreur lors de la recherche : ' + err.message);
+    }
+
+    setSearchLoading(false);
+  }
+
+  async function handleUpdateCredits() {
+    if (!selectedProfile || creditsToAdd < 0) return;
+
+    setCreditsLoading(true);
+    setCreditsMessage('');
+
+    try {
+      const currentCredits = selectedProfile.push_eclair_credits || 0;
+      const newCredits =
+        creditsAction === 'add'
+          ? currentCredits + creditsToAdd
+          : creditsToAdd;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ push_eclair_credits: newCredits })
+        .eq('id', selectedProfile.id);
+
+      if (error) {
+        setCreditsMessage('Erreur : ' + error.message);
+        setCreditsLoading(false);
+        return;
+      }
+
+      // Mettre à jour le profil sélectionné
+      setSelectedProfile({
+        ...selectedProfile,
+        push_eclair_credits: newCredits,
+      });
+
+      // Mettre à jour aussi dans la liste des résultats
+      setSearchResults((prev) =>
+        prev.map((p) =>
+          p.id === selectedProfile.id
+            ? { ...p, push_eclair_credits: newCredits }
+            : p
+        )
+      );
+
+      // Mettre à jour dans latestProfiles si présent
+      setLatestProfiles((prev) =>
+        prev.map((p) =>
+          p.id === selectedProfile.id
+            ? { ...p, push_eclair_credits: newCredits }
+            : p
+        )
+      );
+
+      setCreditsMessage(
+        `✅ ${creditsAction === 'add' ? 'Ajout' : 'Mise à jour'} effectué ! Nouveau total : ${newCredits} crédit(s)`
+      );
+    } catch (err) {
+      setCreditsMessage('Erreur : ' + err.message);
+    }
+
+    setCreditsLoading(false);
+  }
 
   if (loading) {
     return <main>Chargement de l’espace admin…</main>;
@@ -177,6 +282,206 @@ export default function AdminPage() {
         </div>
       </section>
 
+      {/* Section gestion Push Éclair */}
+      <section className="card" style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 12,
+          }}
+        >
+          <h2 style={{ fontSize: 15, margin: 0 }}>
+            💥 Gestion des crédits Push Éclair
+          </h2>
+          <button
+            type="button"
+            onClick={() => setPushEclairSection(!pushEclairSection)}
+            className="btn-primary"
+            style={{ fontSize: 12, padding: '6px 12px' }}
+          >
+            {pushEclairSection ? 'Masquer' : 'Afficher'}
+          </button>
+        </div>
+
+        {pushEclairSection && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Recherche d'utilisateur */}
+            <div>
+              <label style={{ fontSize: 13, marginBottom: 6, display: 'block' }}>
+                Rechercher un utilisateur par pseudo
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Entrer un pseudo..."
+                  style={{ flex: 1 }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchUsers();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSearchUsers}
+                  disabled={searchLoading || !searchQuery.trim()}
+                  className="btn-primary"
+                  style={{ fontSize: 12, padding: '6px 12px' }}
+                >
+                  {searchLoading ? 'Recherche…' : 'Rechercher'}
+                </button>
+              </div>
+            </div>
+
+            {/* Message de recherche */}
+            {creditsMessage && !creditsMessage.startsWith('✅') && (
+              <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                {creditsMessage}
+              </p>
+            )}
+
+            {/* Résultats de recherche */}
+            {searchResults.length > 0 && (
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 8,
+                  padding: 8,
+                }}
+              >
+                {searchResults.map((profile) => (
+                  <div
+                    key={profile.id}
+                    style={{
+                      padding: '8px',
+                      borderRadius: 6,
+                      marginBottom: 4,
+                      border: '1px solid var(--color-border)',
+                      background:
+                        selectedProfile?.id === profile.id
+                          ? 'rgba(168, 85, 247, 0.1)'
+                          : 'var(--color-bg-card)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setSelectedProfile(profile)}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {profile.display_name || 'Sans pseudo'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      {profile.city || 'Ville non renseignée'} • Crédits actuels: <strong>{profile.push_eclair_credits || 0}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Gestion des crédits pour le profil sélectionné */}
+            {selectedProfile && (
+              <div
+                className="card"
+                style={{
+                  padding: '16px',
+                  background: 'rgba(168, 85, 247, 0.05)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                }}
+              >
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>
+                  Gérer les crédits de {selectedProfile.display_name || 'cet utilisateur'}
+                </h3>
+
+                <div style={{ marginBottom: 12 }}>
+                  <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                    Crédits actuels : <strong>{selectedProfile.push_eclair_credits || 0}</strong>
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 13, marginBottom: 6, display: 'block' }}>
+                      Action
+                    </label>
+                    <select
+                      value={creditsAction}
+                      onChange={(e) => setCreditsAction(e.target.value)}
+                      style={{ width: '100%' }}
+                    >
+                      <option value="add">Ajouter des crédits</option>
+                      <option value="set">Définir le nombre exact</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 13, marginBottom: 6, display: 'block' }}>
+                      {creditsAction === 'add' ? 'Nombre de crédits à ajouter' : 'Nombre de crédits'}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={creditsToAdd}
+                      onChange={(e) => setCreditsToAdd(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  {creditsAction === 'add' && (
+                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                      Nouveau total : {selectedProfile.push_eclair_credits || 0} + {creditsToAdd} ={' '}
+                      {(selectedProfile.push_eclair_credits || 0) + creditsToAdd}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleUpdateCredits}
+                    disabled={creditsLoading || creditsToAdd < 0}
+                    className="btn-primary"
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    {creditsLoading
+                      ? 'Mise à jour…'
+                      : creditsAction === 'add'
+                      ? `Ajouter ${creditsToAdd} crédit(s)`
+                      : `Définir à ${creditsToAdd} crédit(s)`}
+                  </button>
+                </div>
+
+                {creditsMessage && (
+                  <p
+                    style={{
+                      marginTop: 12,
+                      fontSize: 13,
+                      color: creditsMessage.startsWith('✅') ? '#10b981' : 'tomato',
+                    }}
+                  >
+                    {creditsMessage}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedProfile(null);
+                    setCreditsMessage('');
+                    setCreditsToAdd(1);
+                  }}
+                  className="btn-outline"
+                  style={{ marginTop: 12, fontSize: 12, padding: '6px 12px' }}
+                >
+                  Choisir un autre utilisateur
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Bloc derniers profils */}
       <section className="card">
         <h2 style={{ fontSize: 15, marginBottom: 8 }}>
@@ -211,6 +516,7 @@ export default function AdminPage() {
                   <th style={{ padding: '6px 4px' }}>Ville</th>
                   <th style={{ padding: '6px 4px' }}>Genre</th>
                   <th style={{ padding: '6px 4px' }}>Intention</th>
+                  <th style={{ padding: '6px 4px' }}>Push Éclair</th>
                   <th style={{ padding: '6px 4px' }}>Créé le</th>
                 </tr>
               </thead>
@@ -229,6 +535,9 @@ export default function AdminPage() {
                     <td style={{ padding: '6px 4px' }}>{p.gender || '—'}</td>
                     <td style={{ padding: '6px 4px' }}>
                       {p.main_intent || '—'}
+                    </td>
+                    <td style={{ padding: '6px 4px' }}>
+                      {p.push_eclair_credits ?? 0}
                     </td>
                     <td style={{ padding: '6px 4px', whiteSpace: 'nowrap' }}>
                       {p.created_at

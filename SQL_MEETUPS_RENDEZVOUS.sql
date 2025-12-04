@@ -325,3 +325,4 @@ GROUP BY m.id;
 -- Les utilisateurs doivent pouvoir voir les rendez-vous de leurs groupes
 -- et répondre aux rendez-vous de leurs groupes
 
+

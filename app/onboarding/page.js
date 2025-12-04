@@ -216,6 +216,7 @@ export default function OnboardingPage() {
 
         <ProfileForm
           userId={userId}
+          profileId={profileId}
           displayName={displayName}
           setDisplayName={setDisplayName}
           city={city}

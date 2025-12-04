@@ -61,3 +61,4 @@ WHERE c.is_group = false
 -- (chaque conversation 1-à-1 doit avoir 2 participants)
 -- ============================================
 
+

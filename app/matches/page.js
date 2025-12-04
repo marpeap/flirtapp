@@ -4,72 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
-
-// Haversine pour approximer la distance en km entre deux points
-function distanceKm(lat1, lng1, lat2, lng2) {
-  if (
-    lat1 == null ||
-    lng1 == null ||
-    lat2 == null ||
-    lng2 == null
-  ) {
-    return null;
-  }
-  const R = 6371; // rayon de la Terre
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function isWantedGender(lookingFor, gender) {
-  if (!lookingFor || lookingFor === 'any') return true;
-  return lookingFor === gender;
-}
-
-function computeMatchScore(me, other, radiusKm) {
-  let score = 0;
-
-  // 1) Proximité (max ~60 points si très proche)
-  const d = distanceKm(me.lat, me.lng, other.lat, other.lng);
-  if (d != null) {
-    const maxRadius = radiusKm || 50;
-    const clamped = Math.max(0, Math.min(maxRadius, d));
-    const distanceFactor = 1 - clamped / maxRadius; // 1 proche, 0 loin
-    score += Math.round(distanceFactor * 60);
-  }
-
-  // 2) Préférences de genre mutuelles (jusqu'à 40 points)
-  const meWantsOther = isWantedGender(me.looking_for_gender, other.gender);
-  const otherWantsMe = isWantedGender(other.looking_for_gender, me.gender);
-
-  if (meWantsOther && otherWantsMe) {
-    score += 40;
-  } else if (meWantsOther || otherWantsMe) {
-    score += 20;
-  }
-
-  // 3) Intention de rencontre (jusqu'à 20 points)
-  if (me.main_intent && other.main_intent) {
-    if (me.main_intent === other.main_intent) {
-      score += 20;
-    } else if (
-      me.main_intent === 'both' ||
-      other.main_intent === 'both'
-    ) {
-      score += 10;
-    }
-  }
-
-  return score;
-}
+import {
+  distanceKm,
+  computeCompatibilityScore,
+  computeMatchScore,
+  getCompatibilityLevel,
+} from '../../lib/matchCompatibility';
 
 export default function MatchesPage() {
   const router = useRouter();
@@ -92,14 +32,21 @@ export default function MatchesPage() {
       }
       const currentUserId = userData.user.id;
 
-      // 2. Son profil complet
-      const { data: me, error: meError } = await supabase
-        .from('profiles')
-        .select(
-          'id, user_id, display_name, gender, main_intent, city, main_photo_url, looking_for_gender, lat, lng, bio'
-        )
-        .eq('user_id', currentUserId)
-        .maybeSingle();
+      // 2. Son profil complet + ses réponses au questionnaire
+      const [{ data: me, error: meError }, { data: myAnswers }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select(
+            'id, user_id, display_name, gender, main_intent, city, main_photo_url, looking_for_gender, lat, lng, bio'
+          )
+          .eq('user_id', currentUserId)
+          .maybeSingle(),
+        supabase
+          .from('matchmaking_answers')
+          .select('answers')
+          .eq('user_id', currentUserId)
+          .maybeSingle(),
+      ]);
 
       if (meError) {
         setErrorMsg(meError.message);
@@ -112,7 +59,7 @@ export default function MatchesPage() {
         return;
       }
 
-      // 3. Candidats proches via RPC nearby_profiles (déjà créée)
+      // 3. Candidats proches via RPC nearby_profiles
       const { data: nearby, error: nearbyError } = await supabase.rpc(
         'nearby_profiles',
         {
@@ -129,10 +76,43 @@ export default function MatchesPage() {
         return;
       }
 
+      // 4. Récupérer les réponses au questionnaire de tous les candidats
+      const candidateUserIds = (nearby || []).map((p) => p.user_id);
+      const { data: allAnswers } = await supabase
+        .from('matchmaking_answers')
+        .select('user_id, answers')
+        .in('user_id', candidateUserIds);
+
+      const answersMap = new Map(
+        (allAnswers || []).map((a) => [a.user_id, a.answers])
+      );
+
+      // 5. Calculer les scores de compatibilité pour chaque candidat
       const rawList = (nearby || []).map((p) => {
-        const score = computeMatchScore(me, p, radiusKm);
+        const otherAnswers = answersMap.get(p.user_id);
+        const myAnswersData = myAnswers?.answers || {};
+
+        // Calculer le score de compatibilité basé sur le questionnaire
+        let compatibilityScore = 0;
+        if (myAnswersData && otherAnswers) {
+          compatibilityScore = computeCompatibilityScore(
+            myAnswersData,
+            otherAnswers
+          );
+        }
+
+        // Calculer le score de match complet
+        const score = computeMatchScore(me, p, radiusKm, compatibilityScore);
         const d = distanceKm(me.lat, me.lng, p.lat, p.lng);
-        return { ...p, score, distanceKm: d };
+        const compatibility = getCompatibilityLevel(compatibilityScore);
+
+        return {
+          ...p,
+          score,
+          compatibilityScore,
+          compatibility,
+          distanceKm: d,
+        };
       });
 
       // 4. Filtrer les scores très bas et trier
@@ -155,8 +135,8 @@ export default function MatchesPage() {
     <main>
       <h1>Matchs suggérés</h1>
       <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
-        Ces suggestions sont basées sur la proximité, vos préférences mutuelles
-        (qui cherche qui) et le type de rencontres indiqué dans vos profils.
+        Ces suggestions sont basées sur votre compatibilité (réponses au questionnaire),
+        la proximité géographique, et vos préférences mutuelles.
       </p>
 
       <div
@@ -247,7 +227,30 @@ export default function MatchesPage() {
                     )}
                   </div>
                   <div style={{ textAlign: 'right', fontSize: 11 }}>
-                    <div>Score : {p.score}</div>
+                    {p.compatibility && (
+                      <div
+                        style={{
+                          marginBottom: 4,
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: `${p.compatibility.color}20`,
+                          border: `1px solid ${p.compatibility.color}`,
+                          color: p.compatibility.color,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {p.compatibility.label}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 4 }}>
+                      Score : {p.score}
+                      {p.compatibilityScore > 0 && (
+                        <span style={{ color: '#9ca3af' }}>
+                          {' '}
+                          (Compatibilité: {p.compatibilityScore}/1000)
+                        </span>
+                      )}
+                    </div>
                     <div>Genre : {p.gender || '-'}</div>
                     <div>
                       Cherche :{' '}
