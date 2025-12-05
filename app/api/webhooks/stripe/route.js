@@ -4,10 +4,16 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// Initialiser Stripe de manière lazy pour éviter les erreurs lors du build
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2023-10-16',
+  });
+}
 
 // Créer le client Supabase seulement si la clé est définie
 function getSupabaseAdmin() {
@@ -23,20 +29,31 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(request) {
+  // Vérifier les variables d'environnement nécessaires
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured');
+    return NextResponse.json(
+      { error: 'Webhook secret not configured' },
+      { status: 500 }
+    );
+  }
+
   const body = await request.text();
   const headersList = headers();
   const signature = headersList.get('stripe-signature');
 
-  if (!signature || !webhookSecret) {
-    console.error('Missing signature or webhook secret');
+  if (!signature) {
+    console.error('Missing signature');
     return NextResponse.json(
-      { error: 'Missing signature or webhook secret' },
+      { error: 'Missing signature' },
       { status: 400 }
     );
   }
 
   let event;
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
