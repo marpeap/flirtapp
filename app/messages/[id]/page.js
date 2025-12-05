@@ -99,7 +99,32 @@ export default function ConversationPage() {
 
       // 3) Charger les messages
       await loadMessages(conv.id);
+      
+      // 4) Marquer comme lu
+      await markConversationAsRead(conv.id, user.id);
+      
       setLoading(false);
+    }
+    
+    async function markConversationAsRead(convId, uId) {
+      // Mettre à jour last_read_at dans conversation_participants
+      const { error } = await supabase
+        .from('conversation_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('conversation_id', convId)
+        .eq('user_id', uId);
+      
+      if (error) {
+        // Si la ligne n'existe pas, la créer
+        await supabase
+          .from('conversation_participants')
+          .upsert({
+            conversation_id: convId,
+            user_id: uId,
+            active: true,
+            last_read_at: new Date().toISOString(),
+          }, { onConflict: 'conversation_id, user_id' });
+      }
     }
 
     async function loadMessages(convId) {

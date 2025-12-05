@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
+import RadiusMapSelector from './_components/RadiusMapSelector';
 
 const MAX_GROUP_SIZE = 7; // toi + 6 autres
 
@@ -36,6 +37,7 @@ export default function ProfilesListPage() {
   const [tornadoSessionSwipes, setTornadoSessionSwipes] = useState([]);
   const [tornadoCardAnimation, setTornadoCardAnimation] = useState(''); // 'swipe-left', 'swipe-right', 'like', 'pass'
   const [tornadoShowMatch, setTornadoShowMatch] = useState(false);
+  const [tornadoMutualMatch, setTornadoMutualMatch] = useState(null); // { profile, isMutual }
 
   // Push Éclair
   const [pushOpen, setPushOpen] = useState(false);
@@ -317,6 +319,7 @@ export default function ProfilesListPage() {
 
     // Attendre un peu pour l'animation
     setTimeout(async () => {
+      // Enregistrer le swipe
       const { error } = await supabase.from('tornado_swipes').insert({
         user_id: currentUserId,
         target_profile_id: current.id,
@@ -327,6 +330,11 @@ export default function ProfilesListPage() {
         setTornadoError(error.message);
         setTornadoCardAnimation('');
         return;
+      }
+
+      // Si c'est un like, notifier la personne et vérifier le match mutuel
+      if (decision === 'like') {
+        await handleTornadoLike(current);
       }
 
       setTornadoSessionSwipes((prev) => [
@@ -346,6 +354,104 @@ export default function ProfilesListPage() {
         setTornadoIndex(tornadoIndex + 1);
       }
     }, 300);
+  }
+
+  // Gérer le like Tornado : vérifier match mutuel et notifier
+  async function handleTornadoLike(likedProfile) {
+    if (!currentUserId || !likedProfile) return;
+
+    const otherUserId = likedProfile.user_id;
+    
+    // Récupérer mon profil pour le message
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+
+    // Vérifier si l'autre personne m'a aussi liké (match mutuel)
+    const { data: mutualLike } = await supabase
+      .from('tornado_swipes')
+      .select('id')
+      .eq('user_id', otherUserId)
+      .eq('target_profile_id', myProfile?.id)
+      .eq('decision', 'like')
+      .maybeSingle();
+
+    const isMutualMatch = !!mutualLike;
+
+    // Si match mutuel, afficher l'effet spécial
+    if (isMutualMatch) {
+      setTornadoMutualMatch({ profile: likedProfile, isMutual: true });
+      // Masquer après 4 secondes
+      setTimeout(() => setTornadoMutualMatch(null), 4000);
+    }
+
+    // Chercher ou créer une conversation
+    let conversationId = null;
+    
+    let { data: conv1 } = await supabase
+      .from('conversations')
+      .select('id')
+      .match({ user_id_1: currentUserId, user_id_2: otherUserId })
+      .maybeSingle();
+
+    if (!conv1) {
+      const { data: conv2 } = await supabase
+        .from('conversations')
+        .select('id')
+        .match({ user_id_1: otherUserId, user_id_2: currentUserId })
+        .maybeSingle();
+      conv1 = conv2;
+    }
+
+    conversationId = conv1?.id;
+
+    // Créer la conversation si elle n'existe pas
+    if (!conversationId) {
+      const { data: newConv, error: convErr } = await supabase
+        .from('conversations')
+        .insert({
+          user_id_1: currentUserId,
+          user_id_2: otherUserId,
+          is_group: false,
+        })
+        .select('id')
+        .single();
+
+      if (convErr || !newConv) {
+        console.error('Erreur création conversation Tornado:', convErr);
+        return;
+      }
+      
+      conversationId = newConv.id;
+
+      // Créer les participants
+      await supabase
+        .from('conversation_participants')
+        .insert([
+          { conversation_id: conversationId, user_id: currentUserId, active: true },
+          { conversation_id: conversationId, user_id: otherUserId, active: true },
+        ]);
+    }
+
+    // Envoyer le message approprié
+    const myName = myProfile?.display_name || 'Quelqu\'un';
+    let messageContent;
+    
+    if (isMutualMatch) {
+      // Match mutuel ! Message spécial
+      messageContent = `🌪️💕 C'est un Match Tornado ! ${myName} et toi vous êtes mutuellement likés. Le courant passe visiblement... Lancez-vous !`;
+    } else {
+      // Like simple - notification discrète
+      messageContent = `🌪️ ${myName} t'a liké dans le Mode Tornado ! Si tu l'aimes aussi, ce sera un match.`;
+    }
+
+    await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      content: messageContent,
+    });
   }
 
   const totalSessionSwipes = tornadoSessionSwipes.length;
@@ -764,8 +870,13 @@ export default function ProfilesListPage() {
       setGroupMatchLoading(false);
       setSelectedProfileIds([]);
       setGroupMatchInfo(
-        "Proposition envoyée. Chaque personne pourra voir les candidats du groupe et accepter ou refuser."
+        "✓ Proposition envoyée ! Les personnes invitées peuvent maintenant accepter ou refuser. Suis l'avancement dans la page Groupes."
       );
+      
+      // Rediriger vers la page des groupes après 2 secondes
+      setTimeout(() => {
+        router.push('/groups');
+      }, 2500);
     } catch (err) {
       console.error(err);
       setGroupMatchLoading(false);
@@ -789,58 +900,166 @@ export default function ProfilesListPage() {
           flexWrap: 'wrap',
         }}
       >
-        <h1>Profils proches</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" onClick={openTornado}>
-            Mode Tornado
+        <h1 style={{
+          background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}>
+          Profils proches
+        </h1>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            onClick={openTornado}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '14px',
+              background: 'rgba(168, 85, 247, 0.1)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              backdropFilter: 'blur(8px)',
+              color: '#e5e7eb',
+              fontSize: 14,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.5)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(168, 85, 247, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🌪️</span>
+            <span>Mode Tornado</span>
           </button>
           <button
             type="button"
             onClick={openPush}
             style={{
-              backgroundImage: 'linear-gradient(135deg, #facc15, #fb7185)',
+              padding: '12px 20px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(251, 113, 133, 0.15))',
+              border: '1px solid rgba(251, 113, 133, 0.4)',
+              backdropFilter: 'blur(8px)',
+              color: '#fcd34d',
+              fontSize: 14,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(250, 204, 21, 0.25), rgba(251, 113, 133, 0.25))';
+              e.currentTarget.style.borderColor = 'rgba(251, 113, 133, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(251, 113, 133, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(251, 113, 133, 0.15))';
+              e.currentTarget.style.borderColor = 'rgba(251, 113, 133, 0.4)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            Push Éclair ({pushCredits})
+            <span style={{ fontSize: 18 }}>⚡</span>
+            <span>Push Éclair</span>
+            <span style={{
+              padding: '2px 8px',
+              borderRadius: '10px',
+              background: 'rgba(250, 204, 21, 0.2)',
+              border: '1px solid rgba(250, 204, 21, 0.4)',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#fcd34d',
+            }}>
+              {pushCredits}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Barre de filtres */}
       <div
-        className="card"
         style={{
           marginBottom: 16,
-          padding: '12px 12px',
+          padding: '16px',
+          borderRadius: '16px',
+          background: 'rgba(168, 85, 247, 0.05)',
+          border: '1px solid rgba(168, 85, 247, 0.15)',
+          backdropFilter: 'blur(8px)',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 12,
+          gap: 14,
         }}
       >
         <div>
-          <label style={{ fontSize: 13, color: '#9ca3af' }}>
+          <label style={{ 
+            fontSize: 12, 
+            color: '#9ca3af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 6,
+          }}>
+            <span>🎯</span>
             Type de rencontre
           </label>
           <select
             value={filterIntent}
             onChange={(e) => setFilterIntent(e.target.value)}
-            style={{ marginTop: 4, width: '100%' }}
+            style={{ 
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(26, 26, 46, 0.6)',
+              border: '1px solid rgba(168, 85, 247, 0.2)',
+              color: '#e5e7eb',
+              fontSize: 14,
+            }}
           >
             <option value="">Tous</option>
-            <option value="friendly">Amical</option>
-            <option value="sexy">Coquin</option>
-            <option value="both">Amical & Coquin</option>
+            <option value="friendly">🤝 Amical</option>
+            <option value="sexy">🔥 Coquin</option>
+            <option value="both">✨ Amical & Coquin</option>
           </select>
         </div>
 
         <div>
-          <label style={{ fontSize: 13, color: '#9ca3af' }}>
+          <label style={{ 
+            fontSize: 12, 
+            color: '#9ca3af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 6,
+          }}>
+            <span>👤</span>
             Genre du profil
           </label>
           <select
             value={filterGender}
             onChange={(e) => setFilterGender(e.target.value)}
-            style={{ marginTop: 4, width: '100%' }}
+            style={{ 
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(26, 26, 46, 0.6)',
+              border: '1px solid rgba(168, 85, 247, 0.2)',
+              color: '#e5e7eb',
+              fontSize: 14,
+            }}
           >
             <option value="">Tous</option>
             <option value="man">Hommes</option>
@@ -850,77 +1069,142 @@ export default function ProfilesListPage() {
           </select>
         </div>
 
-        <div>
-          <label style={{ fontSize: 13, color: '#9ca3af' }}>
-            Rayon de recherche
-          </label>
-          <select
-            value={radiusKm}
-            onChange={(e) => setRadiusKm(Number(e.target.value))}
-            style={{ marginTop: 4, width: '100%' }}
-          >
-            <option value={10}>≈ 10 km</option>
-            <option value={25}>≈ 25 km</option>
-            <option value={50}>≈ 50 km</option>
-          </select>
-        </div>
       </div>
+
+      {/* Carte de rayon de recherche */}
+      <RadiusMapSelector
+        lat={ownProfile?.lat}
+        lng={ownProfile?.lng}
+        radiusKm={radiusKm}
+        onRadiusChange={setRadiusKm}
+        profilesCount={profiles.length}
+      />
 
       {/* Barre de match de groupe */}
       <div
         className="card"
         style={{
           marginBottom: 16,
-          padding: '10px 12px',
+          padding: '14px 16px',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 10,
+          gap: 12,
           alignItems: 'center',
           justifyContent: 'space-between',
+          background: 'rgba(168, 85, 247, 0.05)',
+          border: '1px solid rgba(168, 85, 247, 0.2)',
         }}
       >
-        <div style={{ fontSize: 13 }}>
-          <strong>Ménage de groupe</strong>
-          <p style={{ fontSize: 12, color: '#9ca3af' }}>
-            Sélectionne jusqu’à {MAX_GROUP_SIZE - 1} profils. Ils recevront une
-            proposition de tchat à plusieurs et pourront valider leur
-            participation.
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 8, 
+            marginBottom: 4 
+          }}>
+            <span style={{ fontSize: 18 }}>👥</span>
+            <strong style={{ fontSize: 14 }}>Créer un groupe</strong>
+          </div>
+          <p style={{ fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
+            Sélectionne jusqu'à {MAX_GROUP_SIZE - 1} profils pour proposer un tchat de groupe.
+            Chaque personne pourra accepter ou refuser l'invitation.
           </p>
         </div>
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: 4,
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
           }}
         >
-          <p style={{ fontSize: 12, color: '#e5e7eb' }}>
-            Sélectionnés : {selectedProfileIds.length} / {MAX_GROUP_SIZE - 1}
-          </p>
+          {/* Compteur visuel */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 14px',
+            borderRadius: '20px',
+            background: selectedProfileIds.length > 0 
+              ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(244, 114, 182, 0.15))'
+              : 'rgba(26, 26, 46, 0.6)',
+            border: selectedProfileIds.length > 0 
+              ? '1px solid rgba(168, 85, 247, 0.4)'
+              : '1px solid var(--color-border)',
+          }}>
+            <span style={{ 
+              fontSize: 20, 
+              fontWeight: 700,
+              color: selectedProfileIds.length > 0 ? '#c084fc' : '#6b7280',
+            }}>
+              {selectedProfileIds.length}
+            </span>
+            <span style={{ fontSize: 13, color: '#9ca3af' }}>
+              / {MAX_GROUP_SIZE - 1}
+            </span>
+          </div>
+          
           <button
             type="button"
-            disabled={
-              groupMatchLoading || selectedProfileIds.length === 0
-            }
+            disabled={groupMatchLoading || selectedProfileIds.length === 0}
             onClick={handleCreateGroupMatch}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              background: selectedProfileIds.length > 0
+                ? 'linear-gradient(135deg, #a855f7, #f472b6)'
+                : 'rgba(107, 114, 128, 0.3)',
+              border: 'none',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: groupMatchLoading || selectedProfileIds.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: selectedProfileIds.length === 0 ? 0.6 : 1,
+            }}
           >
-            {groupMatchLoading
-              ? 'Création…'
-              : 'Proposer un match de groupe'}
+            {groupMatchLoading ? '⏳ Création…' : '✓ Proposer le groupe'}
           </button>
         </div>
       </div>
 
       {groupMatchError && (
-        <p style={{ color: 'tomato', marginBottom: 8, fontSize: 13 }}>
-          {groupMatchError}
-        </p>
+        <div style={{ 
+          padding: '12px 16px',
+          borderRadius: '12px',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <span style={{ fontSize: 18 }}>❌</span>
+          <p style={{ color: '#fca5a5', fontSize: 13, margin: 0 }}>
+            {groupMatchError}
+          </p>
+        </div>
       )}
       {groupMatchInfo && (
-        <p style={{ color: '#a3e635', marginBottom: 8, fontSize: 13 }}>
-          {groupMatchInfo}
-        </p>
+        <div style={{ 
+          padding: '12px 16px',
+          borderRadius: '12px',
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <span style={{ fontSize: 18 }}>🎉</span>
+          <div>
+            <p style={{ color: '#a3e635', fontSize: 13, margin: 0 }}>
+              {groupMatchInfo}
+            </p>
+            <p style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
+              Redirection vers la page Groupes…
+            </p>
+          </div>
+        </div>
       )}
 
       {errorMsg && <p style={{ color: 'tomato' }}>{errorMsg}</p>}
@@ -932,15 +1216,36 @@ export default function ProfilesListPage() {
         </p>
       )}
 
-      <ul className="list-card">
+      <ul style={{ 
+        listStyle: 'none', 
+        padding: 0, 
+        margin: 0, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 10 
+      }}>
         {profiles.map((p) => {
           const isSelected = selectedProfileIds.includes(p.id);
           return (
-            <li key={p.id} className="list-card-item">
+            <li 
+              key={p.id} 
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                background: isSelected 
+                  ? 'rgba(16, 185, 129, 0.08)'
+                  : 'rgba(168, 85, 247, 0.05)',
+                border: isSelected 
+                  ? '1px solid rgba(16, 185, 129, 0.3)'
+                  : '1px solid rgba(168, 85, 247, 0.15)',
+                backdropFilter: 'blur(8px)',
+                transition: 'all 0.25s ease',
+              }}
+            >
               <div
                 style={{
                   display: 'flex',
-                  gap: 12,
+                  gap: 14,
                   alignItems: 'center',
                 }}
               >
@@ -951,7 +1256,7 @@ export default function ProfilesListPage() {
                     textDecoration: 'none',
                     flex: 1,
                     display: 'flex',
-                    gap: 12,
+                    gap: 14,
                     alignItems: 'center',
                   }}
                 >
@@ -960,25 +1265,29 @@ export default function ProfilesListPage() {
                       src={p.main_photo_url}
                       alt={p.display_name || 'Photo de profil'}
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: 60,
+                        height: 60,
                         borderRadius: '50%',
                         objectFit: 'cover',
                         flexShrink: 0,
+                        border: '2px solid rgba(168, 85, 247, 0.3)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
                       }}
                     />
                   ) : (
                     <div
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: 60,
+                        height: 60,
                         borderRadius: '50%',
-                        backgroundColor: '#111827',
+                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 20,
+                        fontSize: 22,
+                        fontWeight: 600,
                         flexShrink: 0,
+                        border: '2px solid rgba(168, 85, 247, 0.3)',
                       }}
                     >
                       {(p.display_name || '?')
@@ -992,18 +1301,62 @@ export default function ProfilesListPage() {
                       flex: 1,
                       display: 'flex',
                       justifyContent: 'space-between',
-                      gap: 8,
+                      gap: 10,
                     }}
                   >
                     <div>
-                      <strong>{p.display_name || 'Sans pseudo'}</strong>
-                      <div style={{ fontSize: 12, marginTop: 4 }}>
+                      <strong style={{ 
+                        fontSize: 15, 
+                        display: 'block',
+                        marginBottom: 4,
+                      }}>
+                        {p.display_name || 'Sans pseudo'}
+                      </strong>
+                      <div style={{ 
+                        fontSize: 13, 
+                        color: '#9ca3af',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}>
+                        <span>📍</span>
                         {p.city || 'Ville ?'}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: 11 }}>
-                      <div>Genre : {p.gender || '-'}</div>
-                      <div>Intention : {p.main_intent || '-'}</div>
+                    <div style={{ 
+                      textAlign: 'right', 
+                      fontSize: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                    }}>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        background: 'rgba(168, 85, 247, 0.1)',
+                        color: '#c084fc',
+                      }}>
+                        {p.gender || '-'}
+                      </span>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        background: p.main_intent === 'friendly' 
+                          ? 'rgba(16, 185, 129, 0.1)'
+                          : p.main_intent === 'sexy'
+                          ? 'rgba(244, 114, 182, 0.1)'
+                          : 'rgba(245, 158, 11, 0.1)',
+                        color: p.main_intent === 'friendly' 
+                          ? '#10b981'
+                          : p.main_intent === 'sexy'
+                          ? '#f472b6'
+                          : '#f59e0b',
+                      }}>
+                        {p.main_intent === 'friendly' && '🤝 Amical'}
+                        {p.main_intent === 'sexy' && '🔥 Coquin'}
+                        {p.main_intent === 'wild' && '⚡ Sauvage'}
+                        {!p.main_intent && '-'}
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -1012,19 +1365,22 @@ export default function ProfilesListPage() {
                   type="button"
                   onClick={() => toggleSelectProfile(p.id)}
                   style={{
-                    padding: 'clamp(4px, 1.5vw, 6px) clamp(6px, 1.5vw, 10px)',
-                    fontSize: 'clamp(10px, 2.5vw, 11px)',
-                    backgroundImage: isSelected
-                      ? 'linear-gradient(135deg,#22c55e,#16a34a)'
-                      : 'linear-gradient(135deg,#4b5563,#020617)',
-                    color: '#e5e7eb',
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    background: isSelected
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : 'rgba(168, 85, 247, 0.15)',
+                    color: isSelected ? '#fff' : '#c084fc',
                     whiteSpace: 'nowrap',
-                    borderRadius: '6px',
-                    border: 'none',
+                    borderRadius: '10px',
+                    border: isSelected 
+                      ? 'none'
+                      : '1px solid rgba(168, 85, 247, 0.3)',
                     cursor: 'pointer',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     minWidth: 'fit-content',
                     flexShrink: 0,
+                    transition: 'all 0.2s ease',
                   }}
                   className="group-button"
                 >
@@ -1139,8 +1495,8 @@ export default function ProfilesListPage() {
                 </p>
               )}
 
-            {/* Effet Match */}
-            {tornadoShowMatch && (
+            {/* Effet Like simple */}
+            {tornadoShowMatch && !tornadoMutualMatch && (
               <div
                 style={{
                   position: 'absolute',
@@ -1162,6 +1518,80 @@ export default function ProfilesListPage() {
                 >
                   💖
                 </div>
+              </div>
+            )}
+
+            {/* Effet Match Mutuel ! */}
+            {tornadoMutualMatch && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 100,
+                  background: 'radial-gradient(circle, rgba(244, 114, 182, 0.3) 0%, rgba(168, 85, 247, 0.4) 50%, rgba(0,0,0,0.9) 100%)',
+                  backdropFilter: 'blur(8px)',
+                  animation: 'fadeIn 0.3s ease-out',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 80,
+                    marginBottom: 16,
+                    animation: 'pulse 0.8s ease-out infinite',
+                    filter: 'drop-shadow(0 0 30px rgba(244, 114, 182, 0.9))',
+                  }}
+                >
+                  🌪️💕
+                </div>
+                <h3 style={{
+                  fontSize: 28,
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  marginBottom: 8,
+                  textAlign: 'center',
+                }}>
+                  C'est un Match !
+                </h3>
+                <p style={{
+                  fontSize: 16,
+                  color: '#e5e7eb',
+                  textAlign: 'center',
+                  maxWidth: 300,
+                  lineHeight: 1.5,
+                }}>
+                  {tornadoMutualMatch.profile?.display_name || 'Cette personne'} t'a aussi liké !
+                </p>
+                <p style={{
+                  fontSize: 13,
+                  color: '#9ca3af',
+                  marginTop: 8,
+                  textAlign: 'center',
+                }}>
+                  Une conversation a été créée 💬
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTornadoMutualMatch(null)}
+                  style={{
+                    marginTop: 20,
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Continuer à swiper
+                </button>
               </div>
             )}
 

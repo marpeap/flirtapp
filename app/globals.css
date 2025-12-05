@@ -173,9 +173,15 @@ a:hover {
   transition: all var(--transition-base);
 }
 
+/* Désactiver le hover transform sur les cartes dans les modales */
 .card:hover {
   border-color: var(--color-border-hover);
   box-shadow: var(--shadow-lg);
+}
+
+/* Cartes dans le flux principal uniquement */
+main > .card:hover,
+.list-card-item:hover {
   transform: translateY(-2px);
 }
 
@@ -185,13 +191,11 @@ a:hover {
 }
 
 /* ===========================
-   Boutons
+   Boutons - Styles de base légers
    =========================== */
 
 button {
-  border-radius: var(--radius-full);
   border: 1px solid transparent;
-  padding: var(--spacing-sm) var(--spacing-md);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -202,6 +206,7 @@ button {
   gap: var(--spacing-xs);
   background: transparent;
   color: var(--color-text-primary);
+  font-family: inherit;
 }
 
 button:disabled {
@@ -210,12 +215,23 @@ button:disabled {
   pointer-events: none;
 }
 
+/* Boutons dans le flux principal (pas dans les modales) */
+main > button,
+main .card > button,
+main form button,
+.list-card button {
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
 /* Bouton primaire */
 .btn-primary {
   background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   color: var(--color-text-primary);
   border: none;
   box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -232,6 +248,8 @@ button:disabled {
   background: var(--color-bg-card);
   border-color: var(--color-border);
   color: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -244,6 +262,8 @@ button:disabled {
   background: transparent;
   border-color: var(--color-border);
   color: var(--color-text-secondary);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -269,6 +289,8 @@ button:disabled {
   background: linear-gradient(135deg, var(--color-error), #dc2626);
   color: white;
   border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -280,6 +302,8 @@ button:disabled {
   background: linear-gradient(135deg, var(--color-success), #059669);
   color: white;
   border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 /* ===========================
@@ -490,13 +514,6 @@ label {
     padding: var(--spacing-md);
   }
   
-  /* Boutons */
-  button {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 14px;
-    min-height: 44px; /* Taille tactile recommandée */
-  }
-  
   /* Formulaires */
   input,
   select,
@@ -533,11 +550,6 @@ label {
   }
   h2 { 
     font-size: 1.25rem;
-  }
-  
-  button {
-    width: 100%;
-    justify-content: center;
   }
   
   /* Grilles en colonne unique */
@@ -601,15 +613,14 @@ label {
   }
 }
 
-/* Amélioration du touch target */
+/* Amélioration du touch target - uniquement pour les boutons avec classes spécifiques */
 @media (hover: none) and (pointer: coarse) {
-  /* Sur les appareils tactiles */
-  button,
-  a,
-  input[type="checkbox"],
-  input[type="radio"] {
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline,
+  .btn-danger,
+  .btn-success {
     min-height: 44px;
-    min-width: 44px;
   }
   
   /* Espacement entre les éléments cliquables */
@@ -721,4 +732,3 @@ label {
 .tornado-button-pass:active {
   transform: scale(0.95);
 }
-

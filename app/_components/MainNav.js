@@ -8,7 +8,8 @@ import { supabase } from '@/lib/supabaseClient';
 const links = [
   { href: '/', label: 'Accueil' },
   { href: '/profiles', label: 'Profils' },
-  { href: '/messages', label: 'Messages' },
+  { href: '/groups', label: 'Groupes', badgeType: 'groups' },
+  { href: '/messages', label: 'Messages', badgeType: 'messages' },
   { href: '/onboarding', label: 'Mon profil' },
 ];
 
@@ -18,6 +19,9 @@ export default function MainNav() {
 
   const [userEmail, setUserEmail] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [groupInvitesCount, setGroupInvitesCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -28,6 +32,13 @@ export default function MainNav() {
       } = await supabase.auth.getUser(); // lecture initiale [web:965]
       if (!mounted) return;
       setUserEmail(user?.email ?? null);
+      setCurrentUserId(user?.id ?? null);
+      
+      // Charger le nombre d'invitations de groupe et messages non lus
+      if (user?.id) {
+        loadGroupInvitesCount(user.id);
+        loadUnreadMessagesCount(user.id);
+      }
     }
 
     loadUser();
@@ -37,6 +48,15 @@ export default function MainNav() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       setUserEmail(session?.user?.email ?? null);
+      setCurrentUserId(session?.user?.id ?? null);
+      
+      if (session?.user?.id) {
+        loadGroupInvitesCount(session.user.id);
+        loadUnreadMessagesCount(session.user.id);
+      } else {
+        setGroupInvitesCount(0);
+        setUnreadMessagesCount(0);
+      }
     }); // se met à jour à chaque login/logout [web:959]
 
     return () => {
@@ -44,6 +64,115 @@ export default function MainNav() {
       subscription.unsubscribe();
     };
   }, []);
+
+  async function loadGroupInvitesCount(userId) {
+    if (!userId) return;
+    
+    // Étape 1: Récupérer mes candidatures avec status 'invited'
+    const { data: myCandidatures, error: candError } = await supabase
+      .from('group_match_candidates')
+      .select('id, proposal_id')
+      .eq('user_id', userId)
+      .eq('status', 'invited');
+    
+    if (candError || !myCandidatures || myCandidatures.length === 0) {
+      setGroupInvitesCount(0);
+      return;
+    }
+
+    // Étape 2: Récupérer les propositions pour vérifier qui est le créateur
+    const proposalIds = myCandidatures.map(c => c.proposal_id);
+    const { data: proposals, error: propError } = await supabase
+      .from('group_match_proposals')
+      .select('id, creator_user_id')
+      .in('id', proposalIds);
+    
+    if (propError || !proposals) {
+      setGroupInvitesCount(0);
+      return;
+    }
+
+    // Étape 3: Compter uniquement les invitations où je NE suis PAS le créateur
+    const realInvitesCount = myCandidatures.filter(cand => {
+      const proposal = proposals.find(p => p.id === cand.proposal_id);
+      return proposal && proposal.creator_user_id !== userId;
+    }).length;
+    
+    setGroupInvitesCount(realInvitesCount);
+  }
+
+  async function loadUnreadMessagesCount(userId) {
+    if (!userId) return;
+    
+    try {
+      // Récupérer les conversations où l'utilisateur est participant
+      const { data: parts, error: partErr } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, last_read_at')
+        .eq('user_id', userId)
+        .eq('active', true);
+      
+      if (partErr || !parts || parts.length === 0) {
+        // Fallback: chercher dans conversations directement
+        const { data: convs } = await supabase
+          .from('conversations')
+          .select('id')
+          .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+        
+        if (!convs || convs.length === 0) {
+          setUnreadMessagesCount(0);
+          return;
+        }
+        
+        // Compter les messages non lus (messages des autres utilisateurs récents)
+        const convIds = convs.map(c => c.id);
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { head: true, count: 'exact' })
+          .in('conversation_id', convIds)
+          .neq('sender_id', userId)
+          .gte('created_at', oneDayAgo);
+        
+        setUnreadMessagesCount(Math.min(count || 0, 99));
+        return;
+      }
+      
+      // Compter les messages non lus par conversation
+      let totalUnread = 0;
+      
+      for (const part of parts) {
+        const lastRead = part.last_read_at || new Date(0).toISOString();
+        
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { head: true, count: 'exact' })
+          .eq('conversation_id', part.conversation_id)
+          .neq('sender_id', userId)
+          .gt('created_at', lastRead);
+        
+        totalUnread += count || 0;
+      }
+      
+      setUnreadMessagesCount(Math.min(totalUnread, 99));
+    } catch (err) {
+      console.error('Erreur chargement messages non lus:', err);
+      setUnreadMessagesCount(0);
+    }
+  }
+
+  // Recharger les compteurs périodiquement quand l'utilisateur est connecté
+  useEffect(() => {
+    if (!currentUserId) return;
+    
+    const interval = setInterval(() => {
+      loadGroupInvitesCount(currentUserId);
+      loadUnreadMessagesCount(currentUserId);
+    }, 30000); // Toutes les 30 secondes
+    
+    return () => clearInterval(interval);
+  }, [currentUserId]);
 
   async function handleLogout() {
     setSigningOut(true);
@@ -124,6 +253,20 @@ export default function MainNav() {
             const active =
               pathname === link.href ||
               (link.href !== '/' && pathname.startsWith(link.href));
+            
+            // Déterminer le badge à afficher
+            let badgeCount = 0;
+            let badgeColor = 'linear-gradient(135deg, #f472b6, #a855f7)';
+            
+            if (link.badgeType === 'groups' && groupInvitesCount > 0) {
+              badgeCount = groupInvitesCount;
+            } else if (link.badgeType === 'messages' && unreadMessagesCount > 0) {
+              badgeCount = unreadMessagesCount;
+              badgeColor = 'linear-gradient(135deg, #10b981, #059669)';
+            }
+            
+            const showBadge = badgeCount > 0;
+            
             return (
               <Link
                 key={link.href}
@@ -147,6 +290,8 @@ export default function MainNav() {
                   minHeight: '36px',
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 6,
+                  position: 'relative',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
@@ -162,6 +307,28 @@ export default function MainNav() {
                 }}
               >
                 {link.label}
+                {showBadge && (
+                  <span
+                    style={{
+                      minWidth: 18,
+                      height: 18,
+                      padding: '0 5px',
+                      borderRadius: '9px',
+                      background: badgeColor,
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: link.badgeType === 'messages' 
+                        ? '0 2px 8px rgba(16, 185, 129, 0.4)'
+                        : '0 2px 8px rgba(244, 114, 182, 0.4)',
+                    }}
+                  >
+                    {badgeCount > 9 ? '9+' : badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}
