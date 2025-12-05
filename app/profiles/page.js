@@ -28,6 +28,8 @@ export default function ProfilesListPage() {
   const [tornadoError, setTornadoError] = useState('');
   const [tornadoRemaining, setTornadoRemaining] = useState(10);
   const [tornadoSessionSwipes, setTornadoSessionSwipes] = useState([]);
+  const [tornadoCardAnimation, setTornadoCardAnimation] = useState(''); // 'swipe-left', 'swipe-right', 'like', 'pass'
+  const [tornadoShowMatch, setTornadoShowMatch] = useState(false);
 
   // Push Éclair
   const [pushOpen, setPushOpen] = useState(false);
@@ -272,30 +274,46 @@ export default function ProfilesListPage() {
     const current = tornadoProfiles[tornadoIndex];
     if (!current) return;
 
-    const { error } = await supabase.from('tornado_swipes').insert({
-      user_id: currentUserId,
-      target_profile_id: current.id,
-      decision,
-    });
-
-    if (error) {
-      setTornadoError(error.message);
-      return;
+    // Animation
+    setTornadoCardAnimation(decision === 'like' ? 'swipe-right' : 'swipe-left');
+    
+    // Si c'est un like, montrer l'effet "match" brièvement
+    if (decision === 'like') {
+      setTornadoShowMatch(true);
+      setTimeout(() => setTornadoShowMatch(false), 1500);
     }
 
-    setTornadoSessionSwipes((prev) => [
-      ...prev,
-      { profile: current, decision },
-    ]);
+    // Attendre un peu pour l'animation
+    setTimeout(async () => {
+      const { error } = await supabase.from('tornado_swipes').insert({
+        user_id: currentUserId,
+        target_profile_id: current.id,
+        decision,
+      });
 
-    const nextRemaining = tornadoRemaining - 1;
-    setTornadoRemaining(nextRemaining);
+      if (error) {
+        setTornadoError(error.message);
+        setTornadoCardAnimation('');
+        return;
+      }
 
-    if (tornadoIndex + 1 < tornadoProfiles.length && nextRemaining > 0) {
-      setTornadoIndex(tornadoIndex + 1);
-    } else {
-      setTornadoIndex(tornadoIndex + 1);
-    }
+      setTornadoSessionSwipes((prev) => [
+        ...prev,
+        { profile: current, decision },
+      ]);
+
+      const nextRemaining = tornadoRemaining - 1;
+      setTornadoRemaining(nextRemaining);
+
+      // Réinitialiser l'animation
+      setTornadoCardAnimation('');
+
+      if (tornadoIndex + 1 < tornadoProfiles.length && nextRemaining > 0) {
+        setTornadoIndex(tornadoIndex + 1);
+      } else {
+        setTornadoIndex(tornadoIndex + 1);
+      }
+    }, 300);
   }
 
   const totalSessionSwipes = tornadoSessionSwipes.length;
@@ -962,16 +980,28 @@ export default function ProfilesListPage() {
                   type="button"
                   onClick={() => toggleSelectProfile(p.id)}
                   style={{
-                    padding: '6px 10px',
-                    fontSize: 11,
+                    padding: 'clamp(4px, 1.5vw, 6px) clamp(6px, 1.5vw, 10px)',
+                    fontSize: 'clamp(10px, 2.5vw, 11px)',
                     backgroundImage: isSelected
                       ? 'linear-gradient(135deg,#22c55e,#16a34a)'
                       : 'linear-gradient(135deg,#4b5563,#020617)',
                     color: '#e5e7eb',
                     whiteSpace: 'nowrap',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    minWidth: 'fit-content',
+                    flexShrink: 0,
                   }}
+                  className="group-button"
                 >
-                  {isSelected ? 'Sélectionné' : 'Ajouter au groupe'}
+                  <span className="group-button-text">
+                    {isSelected ? '✓ Sélectionné' : '+ Groupe'}
+                  </span>
+                  <span className="group-button-icon">
+                    {isSelected ? '✓' : '+'}
+                  </span>
                 </button>
               </div>
             </li>
@@ -985,7 +1015,7 @@ export default function ProfilesListPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)',
+            background: 'radial-gradient(circle at center, rgba(168, 85, 247, 0.15), rgba(0,0,0,0.95))',
             zIndex: 60,
             display: 'flex',
             alignItems: 'center',
@@ -993,6 +1023,7 @@ export default function ProfilesListPage() {
             padding: 'clamp(12px, 3vw, 16px)',
             overflowY: 'auto',
           }}
+          className="tornado-overlay"
         >
           <div
             className="card"
@@ -1025,21 +1056,45 @@ export default function ProfilesListPage() {
               Fermer
             </button>
 
-            <h2 style={{ fontSize: 18, marginBottom: 6 }}>Mode Tornado</h2>
-            <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 10 }}>
-              Swipe jusqu’à 10 profils par jour. Plus tard, un abonnement
-              ManyLovr te permettra d'en voir davantage.
-            </p>
-
-            <p
-              style={{
-                fontSize: 13,
-                marginBottom: 10,
-                color: tornadoRemaining > 0 ? '#a3e635' : '#fca5a5',
-              }}
-            >
-              Swipes restants aujourd’hui : {tornadoRemaining}
-            </p>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <h2 style={{ 
+                fontSize: 24, 
+                marginBottom: 4,
+                background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+              }}>
+                🌪️ Mode Tornado
+              </h2>
+              <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>
+                Swipe jusqu'à 10 profils par jour
+              </p>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  background: tornadoRemaining > 0 
+                    ? 'linear-gradient(135deg, rgba(163, 230, 53, 0.2), rgba(163, 230, 53, 0.1))'
+                    : 'linear-gradient(135deg, rgba(252, 165, 165, 0.2), rgba(252, 165, 165, 0.1))',
+                  border: `1px solid ${tornadoRemaining > 0 ? '#a3e635' : '#fca5a5'}`,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>
+                  {tornadoRemaining > 0 ? '⚡' : '💤'}
+                </span>
+                <span style={{
+                  fontSize: 13,
+                  color: tornadoRemaining > 0 ? '#a3e635' : '#fca5a5',
+                  fontWeight: 600,
+                }}>
+                  {tornadoRemaining} swipes restants
+                </span>
+              </div>
+            </div>
 
             {tornadoLoading && <p>Chargement des profils…</p>}
 
@@ -1052,6 +1107,32 @@ export default function ProfilesListPage() {
                 </p>
               )}
 
+            {/* Effet Match */}
+            {tornadoShowMatch && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 100,
+                  pointerEvents: 'none',
+                }}
+                className="tornado-match-effect"
+              >
+                <div
+                  style={{
+                    fontSize: 72,
+                    animation: 'pulse 0.6s ease-out',
+                    filter: 'drop-shadow(0 0 20px rgba(244, 114, 182, 0.8))',
+                  }}
+                >
+                  💖
+                </div>
+              </div>
+            )}
+
             {!tornadoLoading &&
               tornadoRemaining > 0 &&
               tornadoProfiles.length > 0 &&
@@ -1061,66 +1142,117 @@ export default function ProfilesListPage() {
                     const p = tornadoProfiles[tornadoIndex];
                     return (
                       <div
+                        className={`tornado-card ${tornadoCardAnimation}`}
                         style={{
                           marginTop: 6,
                           marginBottom: 12,
                           textAlign: 'center',
+                          position: 'relative',
+                          transition: 'transform 0.3s ease-out, opacity 0.3s ease-out',
                         }}
                       >
-                        {p.main_photo_url ? (
-                          <img
-                            src={p.main_photo_url}
-                            alt={p.display_name || 'Photo de profil'}
-                            style={{
-                              width: '100%',
-                              maxHeight: 260,
-                              objectFit: 'cover',
-                              borderRadius: 14,
-                              marginBottom: 10,
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: 220,
-                              borderRadius: 14,
-                              background:
-                                'radial-gradient(circle at top, #111827, #020617)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 40,
-                            }}
-                          >
-                            {(p.display_name || '?')
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                        )}
+                        <div
+                          style={{
+                            position: 'relative',
+                            borderRadius: 20,
+                            overflow: 'hidden',
+                            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.1))',
+                            padding: 2,
+                            marginBottom: 16,
+                          }}
+                        >
+                          {p.main_photo_url ? (
+                            <img
+                              src={p.main_photo_url}
+                              alt={p.display_name || 'Photo de profil'}
+                              style={{
+                                width: '100%',
+                                maxHeight: '60vh',
+                                minHeight: 300,
+                                objectFit: 'cover',
+                                borderRadius: 18,
+                                display: 'block',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                minHeight: 300,
+                                maxHeight: '60vh',
+                                borderRadius: 18,
+                                background:
+                                  'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 64,
+                              }}
+                            >
+                              {(p.display_name || '?')
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                          )}
+                        </div>
 
-                        <h3 style={{ fontSize: 18 }}>
+                        <h3 style={{ 
+                          fontSize: 22, 
+                          fontWeight: 700,
+                          marginBottom: 8,
+                          background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                        }}>
                           {p.display_name || 'Sans pseudo'}
                         </h3>
-                        <p
+                        <div
                           style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12,
+                            marginBottom: 8,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span style={{
                             fontSize: 13,
                             color: '#e5e7eb',
-                            marginTop: 4,
-                          }}
-                        >
-                          {p.city || 'Quelque part près de toi'} •{' '}
-                          {p.gender || 'Genre ?'}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 12,
-                            color: '#9ca3af',
-                            marginTop: 4,
-                          }}
-                        >
-                          Intention : {p.main_intent || 'Non précisée'}
-                        </p>
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}>
+                            📍 {p.city || 'Quelque part près de toi'}
+                          </span>
+                          <span style={{
+                            fontSize: 13,
+                            color: '#cbd5e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}>
+                            {p.gender || 'Genre ?'}
+                          </span>
+                        </div>
+                        {p.main_intent && (
+                          <div
+                            style={{
+                              display: 'inline-block',
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(244, 114, 182, 0.2))',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                              fontSize: 12,
+                              color: '#e5e7eb',
+                              marginTop: 4,
+                            }}
+                          >
+                            {p.main_intent === 'friendly' && '🤝 Rencontres amicales'}
+                            {p.main_intent === 'sexy' && '🔥 Rencontres coquines'}
+                            {p.main_intent === 'wild' && '⚡ Rencontres sauvages'}
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -1128,31 +1260,77 @@ export default function ProfilesListPage() {
                   <div
                     style={{
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 10,
+                      justifyContent: 'center',
+                      gap: 16,
                       marginTop: 'auto',
+                      paddingTop: 16,
                     }}
                   >
                     <button
                       type="button"
                       onClick={() => handleTornadoSwipe('pass')}
                       disabled={tornadoRemaining <= 0}
+                      className="tornado-button tornado-button-pass"
                       style={{
-                        flex: 1,
-                        backgroundImage:
-                          'linear-gradient(135deg,#4b5563,#020617)',
+                        width: 70,
+                        height: 70,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #4b5563, #1f2937)',
+                        border: '2px solid #6b7280',
                         color: '#e5e7eb',
+                        fontSize: 28,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: tornadoRemaining <= 0 ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (tornadoRemaining > 0) {
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #4b5563, #1f2937)';
                       }}
                     >
-                      ❌ Passer
+                      ✕
                     </button>
                     <button
                       type="button"
                       onClick={() => handleTornadoSwipe('like')}
                       disabled={tornadoRemaining <= 0}
-                      style={{ flex: 1 }}
+                      className="tornado-button tornado-button-like"
+                      style={{
+                        width: 70,
+                        height: 70,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                        border: '2px solid #c084fc',
+                        color: '#fff',
+                        fontSize: 32,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: tornadoRemaining <= 0 ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (tornadoRemaining > 0) {
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.boxShadow = '0 6px 25px rgba(244, 114, 182, 0.6)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(168, 85, 247, 0.4)';
+                      }}
                     >
-                      💘 J’aime
+                      💖
                     </button>
                   </div>
                 </>

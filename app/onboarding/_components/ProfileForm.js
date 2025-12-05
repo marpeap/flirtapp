@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import MultiPhotoUploader from './MultiPhotoUploader';
+import CityGeolocation from './CityGeolocation';
 
 export default function ProfileForm({
   userId,
@@ -9,6 +11,10 @@ export default function ProfileForm({
   setDisplayName,
   city,
   setCity,
+  lat,
+  setLat,
+  lng,
+  setLng,
   gender,
   setGender,
   lookingForGender,
@@ -59,12 +65,16 @@ export default function ProfileForm({
 
       <label style={{ fontSize: 13 }}>
         Ville / zone
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Ex : Lyon, Marseille, Bruxelles…"
-          style={{ marginTop: 4, width: '100%' }}
+        <CityGeolocation 
+          city={city} 
+          setCity={setCity}
+          lat={lat}
+          setLat={setLat}
+          lng={lng}
+          setLng={setLng}
+          onLocationUpdate={(latitude, longitude, cityName) => {
+            // La position est déjà mise à jour via setLat/setLng
+          }}
         />
       </label>
 
@@ -78,8 +88,12 @@ export default function ProfileForm({
           <option value="">Choisir…</option>
           <option value="man">Homme</option>
           <option value="woman">Femme</option>
+          <option value="non_binary">Non-binaire</option>
+          <option value="trans_mtf">Femme trans</option>
+          <option value="trans_ftm">Homme trans</option>
           <option value="couple">Couple</option>
-          <option value="other">Autre / fluide</option>
+          <option value="fluid">Fluide / Queer</option>
+          <option value="other">Autre</option>
         </select>
       </label>
 
@@ -90,10 +104,13 @@ export default function ProfileForm({
           onChange={(e) => setLookingForGender(e.target.value)}
           style={{ marginTop: 4, width: '100%' }}
         >
-          <option value="any">Tout le monde</option>
+          <option value="any">Je mange de tout</option>
           <option value="men">Des hommes</option>
           <option value="women">Des femmes</option>
+          <option value="non_binary">Des personnes non-binaires</option>
+          <option value="trans">Des personnes trans</option>
           <option value="couples">Des couples</option>
+          <option value="queer">Des personnes queer / fluides</option>
         </select>
       </label>
 
@@ -107,7 +124,7 @@ export default function ProfileForm({
           <option value="">Choisir…</option>
           <option value="friendly">Rencontres amicales</option>
           <option value="sexy">Rencontres coquines</option>
-          <option value="both">Un mélange des deux</option>
+          <option value="wild">Rencontres sauvages</option>
         </select>
       </label>
 

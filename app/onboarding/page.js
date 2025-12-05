@@ -22,6 +22,8 @@ export default function OnboardingPage() {
 
   const [displayName, setDisplayName] = useState('');
   const [city, setCity] = useState('');
+  const [lat, setLat] = useState(null);
+  const [lng, setLng] = useState(null);
   const [gender, setGender] = useState('');
   const [lookingForGender, setLookingForGender] = useState('any');
   const [mainIntent, setMainIntent] = useState('');
@@ -54,7 +56,7 @@ export default function OnboardingPage() {
       const { data: prof, error: profErr } = await supabase
         .from('profiles')
         .select(
-          'id, user_id, display_name, city, gender, looking_for_gender, main_intent, bio, main_photo_url'
+          'id, user_id, display_name, city, lat, lng, gender, looking_for_gender, main_intent, bio, main_photo_url'
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -69,6 +71,8 @@ export default function OnboardingPage() {
         setProfileId(prof.id);
         setDisplayName(prof.display_name || '');
         setCity(prof.city || '');
+        setLat(prof.lat || null);
+        setLng(prof.lng || null);
         setGender(prof.gender || '');
         setLookingForGender(prof.looking_for_gender || 'any');
         setMainIntent(prof.main_intent || '');
@@ -122,6 +126,8 @@ export default function OnboardingPage() {
       user_id: userId,
       display_name: displayName || null,
       city: city || null,
+      lat: lat || null,
+      lng: lng || null,
       gender: gender || null,
       looking_for_gender: lookingForGender || 'any',
       main_intent: mainIntent || null,
@@ -221,6 +227,10 @@ export default function OnboardingPage() {
           setDisplayName={setDisplayName}
           city={city}
           setCity={setCity}
+          lat={lat}
+          setLat={setLat}
+          lng={lng}
+          setLng={setLng}
           gender={gender}
           setGender={setGender}
           lookingForGender={lookingForGender}
