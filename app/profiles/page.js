@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 
 const MAX_GROUP_SIZE = 7; // toi + 6 autres
 
 export default function ProfilesListPage() {
   const router = useRouter();
+  // Mettre à jour le statut en ligne automatiquement
+  useOnlineStatus();
+  
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -16,6 +20,8 @@ export default function ProfilesListPage() {
   const [filterIntent, setFilterIntent] = useState('');
   const [filterGender, setFilterGender] = useState('');
   const [radiusKm, setRadiusKm] = useState(25);
+  const [filterActive, setFilterActive] = useState(''); // 'online', 'recent', 'new'
+  const [filterVibes, setFilterVibes] = useState([]);
 
   const [currentUserId, setCurrentUserId] = useState(null);
   const [ownProfile, setOwnProfile] = useState(null);
@@ -144,12 +150,22 @@ export default function ProfilesListPage() {
         let query = supabase
           .from('profiles')
           .select(
-            'id, user_id, display_name, gender, main_intent, city, main_photo_url, looking_for_gender, lat, lng'
+            'id, user_id, display_name, gender, main_intent, city, main_photo_url, looking_for_gender, lat, lng, is_online, last_seen_at, created_at, vibes'
           )
           .neq('user_id', userId);
 
+        // Appliquer les filtres avancés
+        if (filterActive === 'online') {
+          query = query.eq('is_online', true);
+        } else if (filterActive === 'recent') {
+          query = query.gte('last_seen_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        } else if (filterActive === 'new') {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          query = query.gte('created_at', sevenDaysAgo);
+        }
+
         const { data: fallbackList, error: fallbackError } = await query.order(
-          'created_at',
+          filterActive === 'online' ? 'last_seen_at' : 'created_at',
           { ascending: false }
         );
 
@@ -179,7 +195,23 @@ export default function ProfilesListPage() {
           byMyPreference = p.gender === 'couple';
         }
 
-        return byIntent && byGenderFilter && byMyPreference;
+        // Filtre par vibes
+        const byVibes = filterVibes.length === 0 || 
+          (p.vibes && filterVibes.some(vibe => p.vibes.includes(vibe)));
+
+        // Filtre actif (si pas déjà appliqué dans la requête)
+        let byActive = true;
+        if (filterActive === 'online' && myLat != null && myLng != null) {
+          byActive = p.is_online === true;
+        } else if (filterActive === 'recent' && myLat != null && myLng != null) {
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          byActive = p.last_seen_at && new Date(p.last_seen_at) >= oneDayAgo;
+        } else if (filterActive === 'new' && myLat != null && myLng != null) {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          byActive = p.created_at && new Date(p.created_at) >= sevenDaysAgo;
+        }
+
+        return byIntent && byGenderFilter && byMyPreference && byVibes && byActive;
       });
 
       setProfiles(list);
@@ -187,7 +219,7 @@ export default function ProfilesListPage() {
     }
 
     loadData();
-  }, [router, filterIntent, filterGender, radiusKm]);
+  }, [router, filterIntent, filterGender, radiusKm, filterActive, filterVibes]);
 
   // --- Mode Tornado ---
 
