@@ -229,3 +229,4 @@ WHERE p1.user_id != p2.user_id
   AND EXISTS (SELECT 1 FROM matchmaking_answers WHERE user_id = p1.user_id)
   AND EXISTS (SELECT 1 FROM matchmaking_answers WHERE user_id = p2.user_id);
 
+

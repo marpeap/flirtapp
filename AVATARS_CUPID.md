@@ -138,3 +138,4 @@ const avatar = getCupidAvatarByCategory(profile);
 - Si l'utilisateur modifie ses réponses, le profil peut changer
 - La carte personnelle ne s'affiche que si le questionnaire est complété
 
+

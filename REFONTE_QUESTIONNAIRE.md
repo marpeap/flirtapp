@@ -152,3 +152,4 @@ Exécute le fichier `SQL_QUESTIONNAIRE_MATCH.sql` dans Supabase SQL Editor pour 
 - Les incompatibilités majeures (ex: tabac) peuvent pénaliser fortement le score
 - Le système est extensible : facile d'ajouter de nouvelles questions
 
+

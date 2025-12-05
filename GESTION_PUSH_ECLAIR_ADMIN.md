@@ -87,3 +87,4 @@ WHERE id = <profile_id>;
 4. **Statistiques** : Voir combien de crédits ont été distribués au total
 5. **Notifications** : Notifier l'utilisateur quand des crédits sont ajoutés
 
+

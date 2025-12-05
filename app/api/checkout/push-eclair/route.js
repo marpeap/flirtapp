@@ -1,6 +1,5 @@
 // app/api/checkout/push-eclair/route.js
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { getStripeServer } from '@/lib/stripe/stripe-server';
 
@@ -8,36 +7,57 @@ export async function POST(request) {
   try {
     const { packId } = await request.json();
 
-    // Selon packId, tu peux définir plusieurs quantités/prix si tu veux
-    // Ici, on prend un seul pack pour l'exemple (ex: 5 Push pour 4,99 €)
-    const quantity = 5;
-    const priceId = process.env.STRIPE_PUSH_ECLAIR_PRICE_ID; // Price créé dans Stripe
+    // Configuration des packs disponibles
+    const packs = {
+      '1x': {
+        priceId: process.env.STRIPE_PUSH_ECLAIR_1X_PRICE_ID,
+        quantity: 1,
+        label: '1x Push Éclair',
+      },
+      '3x': {
+        priceId: process.env.STRIPE_PUSH_ECLAIR_3X_PRICE_ID,
+        quantity: 3,
+        label: '3x Push Éclair',
+      },
+    };
+
+    // Valider le packId
+    if (!packId || !packs[packId]) {
+      return NextResponse.json(
+        { error: 'Pack invalide. Choisis entre "1x" ou "3x".' },
+        { status: 400 }
+      );
+    }
+
+    const selectedPack = packs[packId];
+    const priceId = selectedPack.priceId;
+    const quantity = selectedPack.quantity;
 
     if (!priceId) {
       return NextResponse.json(
-        { error: 'Prix Stripe non configuré côté serveur.' },
+        { error: `Prix Stripe non configuré pour le pack ${packId}.` },
         { status: 500 }
       );
     }
 
-    const cookieStore = cookies();
-    const supabaseAccessToken =
-      cookieStore.get('sb-access-token')?.value || null;
-
-    if (!supabaseAccessToken) {
+    // Récupérer le token d'authentification depuis le header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Non authentifié.' },
+        { error: 'Non authentifié. Token manquant.' },
         { status: 401 }
       );
     }
 
+    const token = authHeader.replace('Bearer ', '');
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    // Créer un client Supabase avec le token utilisateur
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
-          Authorization: `Bearer ${supabaseAccessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       },
     });
@@ -76,13 +96,26 @@ export async function POST(request) {
     });
 
     // Enregistrement côté base en "pending"
-    await supabase.from('push_eclair_purchases').insert({
-      user_id: user.id,
-      stripe_checkout_id: session.id,
-      quantity,
-      amount_cents: 0, // on mettra à jour via le webhook
-      status: 'pending',
-    });
+    // Utiliser le service role key pour insérer dans la table
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { error: insertError } = await supabaseAdmin
+      .from('push_eclair_purchases')
+      .insert({
+        user_id: user.id,
+        stripe_checkout_id: session.id,
+        quantity,
+        amount_cents: 0, // on mettra à jour via le webhook
+        status: 'pending',
+      });
+
+    if (insertError) {
+      console.error('Erreur insertion achat:', insertError);
+      // On continue quand même car le webhook pourra créer l'entrée
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

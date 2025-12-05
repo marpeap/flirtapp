@@ -36,12 +36,43 @@ export default function ProfilesListPage() {
   const [pushError, setPushError] = useState('');
   const [pushInfo, setPushInfo] = useState('');
   const [pushCredits, setPushCredits] = useState(0);
+  const [selectedPack, setSelectedPack] = useState('1x'); // '1x' ou '3x'
 
   // Sélection pour match de groupe
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
   const [groupMatchLoading, setGroupMatchLoading] = useState(false);
   const [groupMatchError, setGroupMatchError] = useState('');
   const [groupMatchInfo, setGroupMatchInfo] = useState('');
+
+  // Gestion des retours depuis Stripe (success/cancel)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('push_success') === 'true') {
+      setPushInfo('✅ Paiement réussi ! Tes crédits ont été ajoutés.');
+      // Recharger les crédits
+      async function reloadCredits() {
+        if (!currentUserId) return;
+        const {
+          data: own,
+          error: ownProfileError,
+        } = await supabase
+          .from('profiles')
+          .select('push_eclair_credits')
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        if (!ownProfileError && own) {
+          setPushCredits(own.push_eclair_credits || 0);
+        }
+      }
+      reloadCredits();
+      // Nettoyer l'URL
+      router.replace('/profiles');
+    }
+    if (params.get('push_canceled') === 'true') {
+      setPushError('Paiement annulé.');
+      router.replace('/profiles');
+    }
+  }, [currentUserId, router]);
 
   // Chargement de la liste principale
   useEffect(() => {
@@ -291,6 +322,49 @@ export default function ProfilesListPage() {
   function closePush() {
     if (pushSending) return;
     setPushOpen(false);
+  }
+
+  async function handleBuyPushCredits() {
+    setPushError('');
+    setPushInfo('');
+    
+    try {
+      // Récupérer le token d'authentification
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        setPushError('Tu dois être connecté pour acheter des crédits.');
+        return;
+      }
+
+      const response = await fetch('/api/checkout/push-eclair', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ packId: selectedPack }),
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        setPushError(data.error);
+        return;
+      }
+
+      // Rediriger vers Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setPushError('Erreur : URL de paiement non reçue.');
+      }
+    } catch (err) {
+      console.error('Erreur achat crédits:', err);
+      setPushError('Erreur lors de la création du paiement.');
+    }
   }
 
   async function handleSendPush() {
@@ -1165,15 +1239,96 @@ export default function ProfilesListPage() {
               pourras acheter des Push supplémentaires.
             </p>
 
-            <p
+            <div
               style={{
-                fontSize: 13,
-                marginBottom: 10,
-                color: pushCredits > 0 ? '#a3e635' : '#fca5a5',
+                marginBottom: 12,
+                padding: '12px',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                borderRadius: '8px',
               }}
             >
-              Crédits Push Éclair disponibles : {pushCredits}
-            </p>
+              <p
+                style={{
+                  fontSize: 13,
+                  margin: '0 0 10px 0',
+                  color: pushCredits > 0 ? '#a3e635' : '#fca5a5',
+                }}
+              >
+                Crédits Push Éclair disponibles : <strong>{pushCredits}</strong>
+              </p>
+              
+              <div style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 12, marginBottom: 6, color: '#9ca3af' }}>
+                  Choisis un pack :
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPack('1x')}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      backgroundImage:
+                        selectedPack === '1x'
+                          ? 'linear-gradient(135deg, #8b5cf6, #ec4899)'
+                          : 'linear-gradient(135deg, #374151, #1f2937)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    1x Push (2,29€)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPack('3x')}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      backgroundImage:
+                        selectedPack === '3x'
+                          ? 'linear-gradient(135deg, #8b5cf6, #ec4899)'
+                          : 'linear-gradient(135deg, #374151, #1f2937)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    3x Push (4,99€)
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBuyPushCredits}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  backgroundImage: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Acheter {selectedPack === '1x' ? '1 crédit' : '3 crédits'}
+              </button>
+            </div>
 
             <label
               style={{

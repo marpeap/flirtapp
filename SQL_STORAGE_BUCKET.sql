@@ -70,3 +70,4 @@ USING (
 -- Pour vérifier que le bucket a été créé, exécute cette requête :
 -- SELECT * FROM storage.buckets WHERE id = 'profile-photos';
 
+
