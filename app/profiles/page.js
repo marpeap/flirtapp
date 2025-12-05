@@ -350,14 +350,78 @@ export default function ProfilesListPage() {
 
       const data = await response.json();
       
-      if (data.error) {
-        setPushError(data.error);
+      if (!response.ok || data.error) {
+        const errorMsg = data.error || `Erreur ${response.status}: ${response.statusText}`;
+        console.error('Erreur achat crédits:', errorMsg, data);
+        setPushError(errorMsg);
         return;
       }
 
-      // Rediriger vers Stripe Checkout
+      // Ouvrir Stripe Checkout dans une popup
       if (data.url) {
-        window.location.href = data.url;
+        const width = 600;
+        const height = 700;
+        const left = (window.screen.width - width) / 2;
+        const top = (window.screen.height - height) / 2;
+        
+        const popup = window.open(
+          data.url,
+          'Stripe Checkout',
+          `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+        );
+
+        if (!popup) {
+          setPushError('La popup a été bloquée. Autorise les popups pour ce site.');
+          return;
+        }
+
+        // Sauvegarder le nombre de crédits avant l'achat
+        const creditsBefore = pushCredits;
+
+        // Surveiller la popup pour détecter quand elle se ferme
+        const checkPopup = setInterval(async () => {
+          try {
+            // Vérifier si la popup est fermée
+            if (popup.closed) {
+              clearInterval(checkPopup);
+              
+              // Attendre un peu pour que le webhook ait le temps de traiter
+              setTimeout(async () => {
+                // Recharger les crédits pour vérifier si le paiement a réussi
+                if (!currentUserId) return;
+                const {
+                  data: own,
+                  error: ownProfileError,
+                } = await supabase
+                  .from('profiles')
+                  .select('push_eclair_credits')
+                  .eq('user_id', currentUserId)
+                  .maybeSingle();
+                
+                if (!ownProfileError && own) {
+                  const newCredits = own.push_eclair_credits || 0;
+                  setPushCredits(newCredits);
+                  
+                  // Si les crédits ont augmenté, le paiement a réussi
+                  if (newCredits > creditsBefore) {
+                    const addedCredits = newCredits - creditsBefore;
+                    setPushInfo(`✅ Paiement réussi ! ${addedCredits} crédit(s) ajouté(s).`);
+                  }
+                }
+              }, 2000); // Attendre 2 secondes pour laisser le temps au webhook
+            }
+          } catch (e) {
+            // Erreur si la popup est fermée ou inaccessible
+            if (popup.closed) {
+              clearInterval(checkPopup);
+            }
+          }
+        }, 500); // Vérifier toutes les 500ms
+
+        // Nettoyer l'intervalle après 10 minutes (timeout de sécurité)
+        setTimeout(() => {
+          clearInterval(checkPopup);
+        }, 10 * 60 * 1000);
       } else {
         setPushError('Erreur : URL de paiement non reçue.');
       }
@@ -1234,9 +1298,8 @@ export default function ProfilesListPage() {
 
             <h2 style={{ fontSize: 18, marginBottom: 6 }}>Push Éclair</h2>
             <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
-              Dépense 1 Push Éclair pour envoyer une photo à jusqu’à 100
-              personnes dans un rayon de 30 km autour de toi. Plus tard, tu
-              pourras acheter des Push supplémentaires.
+              Dépense 1 Push Éclair pour envoyer une photo à jusqu'à 100
+              personnes dans un rayon de 30 km autour de toi.
             </p>
 
             <div

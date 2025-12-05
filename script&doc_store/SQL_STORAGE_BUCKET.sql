@@ -71,3 +71,4 @@ USING (
 -- SELECT * FROM storage.buckets WHERE id = 'profile-photos';
 
 
+

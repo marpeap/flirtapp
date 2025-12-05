@@ -192,3 +192,4 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 Une fois tout cela fait, l'intégration Stripe sera complète ! 🎉
 
+

@@ -139,3 +139,4 @@ const avatar = getCupidAvatarByCategory(profile);
 - La carte personnelle ne s'affiche que si le questionnaire est complété
 
 
+

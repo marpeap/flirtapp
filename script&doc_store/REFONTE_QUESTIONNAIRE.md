@@ -153,3 +153,4 @@ Exécute le fichier `SQL_QUESTIONNAIRE_MATCH.sql` dans Supabase SQL Editor pour 
 - Le système est extensible : facile d'ajouter de nouvelles questions
 
 
+

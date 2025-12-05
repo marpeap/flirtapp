@@ -224,3 +224,4 @@ Pour toutes ces cartes :
 - Documentation Webhooks Stripe : https://stripe.com/docs/webhooks
 - ngrok (pour tester les webhooks en local) : https://ngrok.com
 
+

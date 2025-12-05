@@ -9,10 +9,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Créer le client Supabase seulement si la clé est définie
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_URL non configurées');
+    return null;
+  }
+  
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 export async function POST(request) {
   const body = await request.text();
@@ -41,6 +49,15 @@ export async function POST(request) {
   // Gérer les événements
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
+    
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      console.error('Impossible de créer le client Supabase admin');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
     
     try {
       // Mettre à jour la table push_eclair_purchases
@@ -111,12 +128,16 @@ export async function POST(request) {
   // Gérer d'autres événements si nécessaire
   if (event.type === 'checkout.session.async_payment_failed') {
     const session = event.data.object;
-    await supabase
-      .from('push_eclair_purchases')
-      .update({ status: 'failed' })
-      .eq('stripe_checkout_id', session.id);
+    const supabase = getSupabaseAdmin();
+    if (supabase) {
+      await supabase
+        .from('push_eclair_purchases')
+        .update({ status: 'failed' })
+        .eq('stripe_checkout_id', session.id);
+    }
   }
 
   return NextResponse.json({ received: true });
 }
+
 

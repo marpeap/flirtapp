@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import StatsWidget from './_components/StatsWidget';
 
 export default function HomePage() {
   const router = useRouter();
@@ -187,22 +188,32 @@ export default function HomePage() {
 
         {/* Bloc visuel (droite) */}
         <section
-          className="card"
           style={{
-            position: 'relative',
-            padding: 'clamp(20px, 4vw, 32px)',
-            background:
-              'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.08))',
-            border: '1px solid rgba(168, 85, 247, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 24,
           }}
         >
+          {/* Widget Stats */}
+          <StatsWidget />
+
           <div
+            className="card"
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 24,
+              position: 'relative',
+              padding: 'clamp(20px, 4vw, 32px)',
+              background:
+                'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.08))',
+              border: '1px solid rgba(168, 85, 247, 0.2)',
             }}
           >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 24,
+              }}
+            >
             <div>
               <div
                 style={{
@@ -362,6 +373,7 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
+          </div>
           </div>
         </section>
       </div>

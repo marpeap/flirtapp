@@ -74,7 +74,24 @@ export async function POST(request) {
       );
     }
 
+    // Vérifier que la clé Stripe est configurée
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY non configurée');
+      return NextResponse.json(
+        { error: 'Configuration Stripe manquante. Contacte le support.' },
+        { status: 500 }
+      );
+    }
+
     const stripe = getStripeServer();
+
+    if (!stripe) {
+      console.error('Impossible d\'initialiser Stripe');
+      return NextResponse.json(
+        { error: 'Erreur d\'initialisation Stripe. Contacte le support.' },
+        { status: 500 }
+      );
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -85,8 +102,8 @@ export async function POST(request) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/profiles?push_success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/profiles?push_canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/push-success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/push-canceled`,
       metadata: {
         user_id: user.id,
         feature: 'push_eclair',
@@ -97,31 +114,48 @@ export async function POST(request) {
 
     // Enregistrement côté base en "pending"
     // Utiliser le service role key pour insérer dans la table
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-
-    const { error: insertError } = await supabaseAdmin
-      .from('push_eclair_purchases')
-      .insert({
-        user_id: user.id,
-        stripe_checkout_id: session.id,
-        quantity,
-        amount_cents: 0, // on mettra à jour via le webhook
-        status: 'pending',
-      });
-
-    if (insertError) {
-      console.error('Erreur insertion achat:', insertError);
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY non configurée');
       // On continue quand même car le webhook pourra créer l'entrée
+    } else {
+      const supabaseAdmin = createClient(
+        supabaseUrl,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+
+      const { error: insertError } = await supabaseAdmin
+        .from('push_eclair_purchases')
+        .insert({
+          user_id: user.id,
+          stripe_checkout_id: session.id,
+          quantity,
+          amount_cents: 0, // on mettra à jour via le webhook
+          status: 'pending',
+        });
+
+      if (insertError) {
+        console.error('Erreur insertion achat:', insertError);
+        // On continue quand même car le webhook pourra créer l'entrée
+      }
     }
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error('Erreur création Checkout Push Éclair', err);
+    console.error('Erreur création Checkout Push Éclair:', err);
+    console.error('Détails de l\'erreur:', {
+      message: err.message,
+      type: err.type,
+      code: err.code,
+      statusCode: err.statusCode,
+    });
+    
+    // Retourner un message plus détaillé en développement
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? `Erreur serveur: ${err.message || 'Erreur inconnue'}`
+      : 'Erreur serveur lors de la création du paiement.';
+    
     return NextResponse.json(
-      { error: 'Erreur serveur lors de la création du paiement.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
