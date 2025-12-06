@@ -96,7 +96,7 @@ export default function HomePage() {
               marginBottom: 'clamp(20px, 4vw, 32px)',
             }}
           >
-            ManyLovr t'aide à créer des connexions authentiques, en solo ou à
+            ManyLovr t'aide à créer des connexions authentiques, en solo / duo ou à
             plusieurs, sans spam ni swipe infini. Tu poses ton cadre, tes envies,
             tes groupes ; on s'occupe de te présenter les bonnes personnes.
           </p>
