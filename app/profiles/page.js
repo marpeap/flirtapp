@@ -533,6 +533,36 @@ export default function ProfilesListPage() {
 
         // Sauvegarder le nombre de crédits avant l'achat
         const creditsBefore = pushCredits;
+        const expectedCredits = selectedPack === '3x' ? 3 : 1;
+
+        // Fonction de polling pour vérifier les crédits
+        async function pollCredits(attempts = 0, maxAttempts = 10) {
+          if (!currentUserId) return;
+          
+          const { data: own, error: ownProfileError } = await supabase
+            .from('profiles')
+            .select('push_eclair_credits')
+            .eq('user_id', currentUserId)
+            .maybeSingle();
+          
+          if (!ownProfileError && own) {
+            const newCredits = own.push_eclair_credits || 0;
+            setPushCredits(newCredits);
+            
+            // Si les crédits ont augmenté, le paiement a réussi
+            if (newCredits > creditsBefore) {
+              const addedCredits = newCredits - creditsBefore;
+              setPushInfo(`✅ Paiement réussi ! +${addedCredits} crédit(s) ajouté(s). Total : ${newCredits}`);
+              return true;
+            }
+          }
+          
+          // Continuer le polling si on n'a pas encore atteint le max
+          if (attempts < maxAttempts) {
+            setTimeout(() => pollCredits(attempts + 1, maxAttempts), 2000);
+          }
+          return false;
+        }
 
         // Surveiller la popup pour détecter quand elle se ferme
         const checkPopup = setInterval(async () => {
@@ -541,35 +571,16 @@ export default function ProfilesListPage() {
             if (popup.closed) {
               clearInterval(checkPopup);
               
-              // Attendre un peu pour que le webhook ait le temps de traiter
-              setTimeout(async () => {
-                // Recharger les crédits pour vérifier si le paiement a réussi
-                if (!currentUserId) return;
-                const {
-                  data: own,
-                  error: ownProfileError,
-                } = await supabase
-                  .from('profiles')
-                  .select('push_eclair_credits')
-                  .eq('user_id', currentUserId)
-                  .maybeSingle();
-                
-                if (!ownProfileError && own) {
-                  const newCredits = own.push_eclair_credits || 0;
-                  setPushCredits(newCredits);
-                  
-                  // Si les crédits ont augmenté, le paiement a réussi
-                  if (newCredits > creditsBefore) {
-                    const addedCredits = newCredits - creditsBefore;
-                    setPushInfo(`✅ Paiement réussi ! ${addedCredits} crédit(s) ajouté(s).`);
-                  }
-                }
-              }, 2000); // Attendre 2 secondes pour laisser le temps au webhook
+              // Lancer le polling avec un délai initial
+              setPushInfo('⏳ Vérification du paiement...');
+              setTimeout(() => pollCredits(0, 15), 1500);
             }
           } catch (e) {
             // Erreur si la popup est fermée ou inaccessible
             if (popup.closed) {
               clearInterval(checkPopup);
+              setPushInfo('⏳ Vérification du paiement...');
+              setTimeout(() => pollCredits(0, 15), 1500);
             }
           }
         }, 500); // Vérifier toutes les 500ms
@@ -1260,41 +1271,60 @@ export default function ProfilesListPage() {
                     alignItems: 'center',
                   }}
                 >
-                  {p.main_photo_url ? (
-                    <img
-                      src={p.main_photo_url}
-                      alt={p.display_name || 'Photo de profil'}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        flexShrink: 0,
-                        border: '2px solid rgba(168, 85, 247, 0.3)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 22,
-                        fontWeight: 600,
-                        flexShrink: 0,
-                        border: '2px solid rgba(168, 85, 247, 0.3)',
-                      }}
-                    >
-                      {(p.display_name || '?')
-                        .charAt(0)
-                        .toUpperCase()}
-                    </div>
-                  )}
+                  {/* Avatar avec pastille de statut en ligne */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    {p.main_photo_url ? (
+                      <img
+                        src={p.main_photo_url}
+                        alt={p.display_name || 'Photo de profil'}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid rgba(168, 85, 247, 0.3)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 22,
+                          fontWeight: 600,
+                          border: '2px solid rgba(168, 85, 247, 0.3)',
+                        }}
+                      >
+                        {(p.display_name || '?')
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
+                    )}
+                    
+                    {/* Pastille verte - En ligne */}
+                    {(p.is_online || (p.last_seen_at && new Date(p.last_seen_at) > new Date(Date.now() - 5 * 60 * 1000))) && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: 2,
+                          right: 2,
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          border: '2px solid var(--color-bg-primary)',
+                          boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
+                        }}
+                        title="En ligne"
+                      />
+                    )}
+                  </div>
 
                   <div
                     style={{

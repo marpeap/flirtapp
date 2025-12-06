@@ -30,6 +30,25 @@ export default function AdminPage() {
   const [creditsLoading, setCreditsLoading] = useState(false);
   const [creditsMessage, setCreditsMessage] = useState('');
 
+  // Section création de profils bash
+  const [bashProfileSection, setBashProfileSection] = useState(false);
+  const [bashProfiles, setBashProfiles] = useState([]);
+  const [bashLoading, setBashLoading] = useState(false);
+  const [bashMessage, setBashMessage] = useState('');
+  const [bashForm, setBashForm] = useState({
+    display_name: '',
+    gender: 'woman',
+    city: 'Paris',
+    main_intent: 'casual',
+    bio: '',
+    age: 25,
+    lat: 48.8566,
+    lng: 2.3522,
+  });
+  const [selectedBashProfile, setSelectedBashProfile] = useState(null);
+  const [bashMessages, setBashMessages] = useState([]);
+  const [bashMessagesLoading, setBashMessagesLoading] = useState(false);
+
   useEffect(() => {
     async function init() {
       setLoading(true);
@@ -129,6 +148,176 @@ export default function AdminPage() {
     }
 
     setSearchLoading(false);
+  }
+
+  // === Fonctions Profils Bash ===
+  async function loadBashProfiles() {
+    setBashLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, user_id, display_name, city, gender, main_intent, created_at, bio, is_bash_profile')
+      .eq('is_bash_profile', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      setBashMessage('Erreur: ' + error.message);
+    } else {
+      setBashProfiles(data || []);
+    }
+    setBashLoading(false);
+  }
+
+  async function createBashProfile() {
+    if (!bashForm.display_name.trim()) {
+      setBashMessage('Le pseudo est obligatoire.');
+      return;
+    }
+    
+    setBashLoading(true);
+    setBashMessage('');
+    
+    try {
+      // Créer un UUID fictif pour le user_id (pas de compte auth réel)
+      const fakeUserId = crypto.randomUUID();
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: fakeUserId,
+          display_name: bashForm.display_name.trim(),
+          gender: bashForm.gender,
+          city: bashForm.city,
+          main_intent: bashForm.main_intent,
+          bio: bashForm.bio,
+          age: bashForm.age,
+          lat: bashForm.lat,
+          lng: bashForm.lng,
+          is_bash_profile: true,
+          is_online: false,
+          push_eclair_credits: 0,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        setBashMessage('Erreur création: ' + error.message);
+      } else {
+        setBashMessage(`✅ Profil "${bashForm.display_name}" créé avec succès !`);
+        setBashProfiles(prev => [data, ...prev]);
+        setBashForm({
+          display_name: '',
+          gender: 'woman',
+          city: 'Paris',
+          main_intent: 'casual',
+          bio: '',
+          age: 25,
+          lat: 48.8566,
+          lng: 2.3522,
+        });
+      }
+    } catch (err) {
+      setBashMessage('Erreur: ' + err.message);
+    }
+    
+    setBashLoading(false);
+  }
+
+  async function deleteBashProfile(profileId) {
+    if (!confirm('Supprimer ce profil bash ?')) return;
+    
+    setBashLoading(true);
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', profileId)
+      .eq('is_bash_profile', true);
+    
+    if (error) {
+      setBashMessage('Erreur suppression: ' + error.message);
+    } else {
+      setBashProfiles(prev => prev.filter(p => p.id !== profileId));
+      setBashMessage('✅ Profil supprimé.');
+      if (selectedBashProfile?.id === profileId) {
+        setSelectedBashProfile(null);
+        setBashMessages([]);
+      }
+    }
+    setBashLoading(false);
+  }
+
+  async function loadBashProfileMessages(profile) {
+    setSelectedBashProfile(profile);
+    setBashMessagesLoading(true);
+    setBashMessages([]);
+    
+    // Récupérer les conversations où ce profil est participant
+    const { data: convs, error: convErr } = await supabase
+      .from('conversations')
+      .select('id, user_id_1, user_id_2, is_group, name')
+      .or(`user_id_1.eq.${profile.user_id},user_id_2.eq.${profile.user_id}`);
+    
+    if (convErr || !convs || convs.length === 0) {
+      setBashMessagesLoading(false);
+      return;
+    }
+    
+    // Récupérer les messages de ces conversations
+    const convIds = convs.map(c => c.id);
+    const { data: msgs, error: msgsErr } = await supabase
+      .from('messages')
+      .select('id, conversation_id, sender_id, content, created_at')
+      .in('conversation_id', convIds)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (!msgsErr && msgs) {
+      // Enrichir avec les infos de l'autre utilisateur
+      const enrichedMsgs = await Promise.all(msgs.map(async (msg) => {
+        const conv = convs.find(c => c.id === msg.conversation_id);
+        const otherUserId = conv?.user_id_1 === profile.user_id 
+          ? conv?.user_id_2 
+          : conv?.user_id_1;
+        
+        let otherProfile = null;
+        if (otherUserId) {
+          const { data: op } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('user_id', otherUserId)
+            .maybeSingle();
+          otherProfile = op;
+        }
+        
+        return {
+          ...msg,
+          isMine: msg.sender_id === profile.user_id,
+          otherDisplayName: otherProfile?.display_name || 'Inconnu',
+        };
+      }));
+      
+      setBashMessages(enrichedMsgs);
+    }
+    
+    setBashMessagesLoading(false);
+  }
+
+  async function sendBashMessage(conversationId, content) {
+    if (!selectedBashProfile || !content.trim()) return;
+    
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: selectedBashProfile.user_id,
+        content: content.trim(),
+      });
+    
+    if (error) {
+      setBashMessage('Erreur envoi: ' + error.message);
+    } else {
+      // Recharger les messages
+      loadBashProfileMessages(selectedBashProfile);
+    }
   }
 
   async function handleUpdateCredits() {
@@ -476,6 +665,288 @@ export default function AdminPage() {
                 >
                   Choisir un autre utilisateur
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Section création de profils bash */}
+      <section className="card" style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 12,
+          }}
+        >
+          <h2 style={{ fontSize: 15, margin: 0 }}>
+            🤖 Création de profils Bash
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              setBashProfileSection(!bashProfileSection);
+              if (!bashProfileSection) loadBashProfiles();
+            }}
+            className="btn-primary"
+            style={{ fontSize: 12, padding: '6px 12px' }}
+          >
+            {bashProfileSection ? 'Masquer' : 'Afficher'}
+          </button>
+        </div>
+
+        {bashProfileSection && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Formulaire de création */}
+            <div
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                background: 'rgba(16, 185, 129, 0.05)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+              }}
+            >
+              <h3 style={{ fontSize: 14, marginBottom: 12 }}>Créer un nouveau profil</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Pseudo *</label>
+                  <input
+                    type="text"
+                    value={bashForm.display_name}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, display_name: e.target.value }))}
+                    placeholder="Ex: Sophie_Paris"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Genre</label>
+                  <select
+                    value={bashForm.gender}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, gender: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="woman">Femme</option>
+                    <option value="man">Homme</option>
+                    <option value="couple">Couple</option>
+                    <option value="other">Autre</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Ville</label>
+                  <input
+                    type="text"
+                    value={bashForm.city}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="Ex: Paris"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Âge</label>
+                  <input
+                    type="number"
+                    min={18}
+                    max={99}
+                    value={bashForm.age}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, age: Number(e.target.value) }))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Intention</label>
+                  <select
+                    value={bashForm.main_intent}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, main_intent: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="casual">Casual</option>
+                    <option value="serious">Sérieux</option>
+                    <option value="friendship">Amitié</option>
+                    <option value="open">Ouvert</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Latitude</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={bashForm.lat}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, lat: parseFloat(e.target.value) }))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Longitude</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={bashForm.lng}
+                    onChange={(e) => setBashForm(prev => ({ ...prev, lng: parseFloat(e.target.value) }))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ marginTop: 12 }}>
+                <label style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Bio</label>
+                <textarea
+                  value={bashForm.bio}
+                  onChange={(e) => setBashForm(prev => ({ ...prev, bio: e.target.value }))}
+                  placeholder="Description du profil..."
+                  rows={3}
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+              
+              <button
+                type="button"
+                onClick={createBashProfile}
+                disabled={bashLoading || !bashForm.display_name.trim()}
+                className="btn-success"
+                style={{ marginTop: 12, fontSize: 13 }}
+              >
+                {bashLoading ? 'Création...' : '+ Créer le profil bash'}
+              </button>
+            </div>
+
+            {bashMessage && (
+              <p style={{
+                fontSize: 13,
+                color: bashMessage.startsWith('✅') ? '#10b981' : 'tomato',
+              }}>
+                {bashMessage}
+              </p>
+            )}
+
+            {/* Liste des profils bash existants */}
+            <div>
+              <h3 style={{ fontSize: 14, marginBottom: 8 }}>
+                Profils bash existants ({bashProfiles.length})
+              </h3>
+              
+              {bashProfiles.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#9ca3af' }}>Aucun profil bash créé.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {bashProfiles.map((bp) => (
+                    <div
+                      key={bp.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 8,
+                        background: selectedBashProfile?.id === bp.id
+                          ? 'rgba(168, 85, 247, 0.1)'
+                          : 'var(--color-bg-card)',
+                        border: '1px solid var(--color-border)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => loadBashProfileMessages(bp)}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <strong style={{ fontSize: 14 }}>{bp.display_name}</strong>
+                          <span style={{
+                            marginLeft: 8,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: 'rgba(16, 185, 129, 0.2)',
+                            color: '#10b981',
+                            fontSize: 10,
+                          }}>
+                            BASH
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteBashProfile(bp.id);
+                          }}
+                          className="btn-danger"
+                          style={{ fontSize: 11, padding: '4px 8px' }}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                        {bp.city} • {bp.gender} • {bp.main_intent}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Messages reçus par le profil bash sélectionné */}
+            {selectedBashProfile && (
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 12,
+                  background: 'rgba(59, 130, 246, 0.05)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                }}
+              >
+                <h3 style={{ fontSize: 14, marginBottom: 12 }}>
+                  📬 Messages de {selectedBashProfile.display_name}
+                </h3>
+                
+                {bashMessagesLoading ? (
+                  <p style={{ fontSize: 13, color: '#9ca3af' }}>Chargement...</p>
+                ) : bashMessages.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#9ca3af' }}>Aucun message.</p>
+                ) : (
+                  <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {bashMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        style={{
+                          padding: 10,
+                          borderRadius: 8,
+                          background: msg.isMine
+                            ? 'rgba(168, 85, 247, 0.1)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          borderLeft: msg.isMine
+                            ? '3px solid #a855f7'
+                            : '3px solid #3b82f6',
+                        }}
+                      >
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>
+                          {msg.isMine ? `→ Envoyé à ${msg.otherDisplayName}` : `← Reçu de ${msg.otherDisplayName}`}
+                          <span style={{ marginLeft: 8 }}>
+                            {new Date(msg.created_at).toLocaleString('fr-FR')}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 13, margin: 0 }}>{msg.content}</p>
+                        
+                        {!msg.isMine && (
+                          <div style={{ marginTop: 8 }}>
+                            <input
+                              type="text"
+                              placeholder="Répondre..."
+                              style={{ fontSize: 12, padding: '6px 10px', width: '70%' }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                  sendBashMessage(msg.conversation_id, e.target.value);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

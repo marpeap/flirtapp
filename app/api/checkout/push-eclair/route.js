@@ -102,12 +102,13 @@ export async function POST(request) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/push-success`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/push-success?pack=${packId}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/push-canceled`,
       metadata: {
         user_id: user.id,
         feature: 'push_eclair',
         push_quantity: String(quantity),
+        pack_id: packId,
       },
       customer_email: user.email ?? undefined,
     });
