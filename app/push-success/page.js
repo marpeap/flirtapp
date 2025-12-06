@@ -1,16 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
+// Force le rendu côté client (évite le prerender avec des query params dynamiques)
+export const dynamic = 'force-dynamic';
+
 export default function PushSuccessPage() {
-  const searchParams = useSearchParams();
-  const pack = searchParams.get('pack') || '1x';
-  const quantity = pack === '3x' ? 3 : 1;
-  
+  const [pack, setPack] = useState('1x');
   const [countdown, setCountdown] = useState(5);
   const [autoClose, setAutoClose] = useState(true);
+
+  useEffect(() => {
+    // Récupérer le pack depuis l'URL côté client (évite useSearchParams / Suspense)
+    const params = new URLSearchParams(window.location.search);
+    const packParam = params.get('pack');
+    setPack(packParam === '3x' ? '3x' : '1x');
+  }, []);
+
+  const quantity = pack === '3x' ? 3 : 1;
 
   useEffect(() => {
     // Compte à rebours avant fermeture automatique
@@ -158,6 +166,3 @@ export default function PushSuccessPage() {
     </div>
   );
 }
-
-
-
