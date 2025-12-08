@@ -191,57 +191,11 @@ export default function MainNav() {
   const showBadges = Boolean(userEmail);
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backdropFilter: 'blur(16px)',
-        backgroundColor: 'rgba(24, 24, 48, 0.72)',
-        borderBottom: '1px solid rgba(168, 85, 247, 0.08)',
-        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
-      }}
-    >
-      <nav
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          padding: '10px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
+    <header className="app-header">
+      <nav className="app-nav">
         {/* Logo */}
-        <Link
-          href="/"
-          style={{
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            fontSize: 18,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textDecoration: 'none',
-            color: 'var(--color-text-primary)',
-            transition: 'all 0.25s ease',
-          }}
-          className="fade-in"
-        >
-          <span
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(168, 85, 247, 0.4)',
-            }}
-          >
+        <Link href="/" className="app-logo-link fade-in">
+          <span className="app-logo-mark">
             <span style={{ fontSize: 18 }}>💜</span>
           </span>
           <span className="text-gradient" style={{ fontSize: 18 }}>
@@ -249,14 +203,7 @@ export default function MainNav() {
           </span>
         </Link>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="app-nav-links">
           {navLinks.map((link) => {
             const active =
               pathname === link.href ||
@@ -279,60 +226,13 @@ export default function MainNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                style={{
-                  fontSize: 'clamp(12px, 2.5vw, 14px)',
-                  padding: '6px 12px',
-                  borderRadius: '9999px',
-                  border: active
-                    ? '1px solid rgba(168, 85, 247, 0.4)'
-                    : '1px solid transparent',
-                  background: active
-                    ? 'rgba(168, 85, 247, 0.15)'
-                    : 'transparent',
-                  color: active
-                    ? 'var(--color-primary-light)'
-                    : 'var(--color-text-secondary)',
-                  textDecoration: 'none',
-                  transition: 'all 0.25s ease',
-                  fontWeight: active ? 500 : 400,
-                  minHeight: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)';
-                    e.currentTarget.style.color = 'var(--color-primary-light)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                  }
-                }}
+                className={`app-nav-link ${active ? 'active' : ''}`}
               >
                 {link.label}
                 {showBadge && (
                   <span
-                    style={{
-                      minWidth: 18,
-                      height: 18,
-                      padding: '0 5px',
-                      borderRadius: '9px',
-                      background: badgeColor,
-                      color: '#fff',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: link.badgeType === 'messages' 
-                        ? '0 2px 8px rgba(16, 185, 129, 0.4)'
-                        : '0 2px 8px rgba(244, 114, 182, 0.4)',
-                    }}
+                    className={`app-nav-badge ${link.badgeType === 'messages' ? 'success' : ''}`}
+                    style={{ background: badgeColor }}
                   >
                     {badgeCount > 9 ? '9+' : badgeCount}
                   </span>
@@ -342,16 +242,7 @@ export default function MainNav() {
           })}
 
           {userEmail ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                paddingLeft: 8,
-                borderLeft: '1px solid rgba(168, 85, 247, 0.2)',
-                flexWrap: 'wrap',
-              }}
-            >
+            <div className="app-nav-user">
               <span
                 style={{
                   fontSize: 'clamp(10px, 2vw, 12px)',
@@ -370,11 +261,6 @@ export default function MainNav() {
                 onClick={handleLogout}
                 disabled={signingOut}
                 className="btn-danger"
-                style={{
-                  fontSize: 'clamp(11px, 2.5vw, 12px)',
-                  padding: '6px 12px',
-                  minHeight: '36px',
-                }}
               >
                 {signingOut ? 'Déconnexion…' : 'Déconnexion'}
               </button>
@@ -383,14 +269,6 @@ export default function MainNav() {
             <Link
               href="/login"
               className="btn-primary"
-              style={{
-                fontSize: 'clamp(12px, 2.5vw, 14px)',
-                padding: '6px 16px',
-                textDecoration: 'none',
-                minHeight: '36px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
             >
               Connexion
             </Link>

@@ -52,7 +52,7 @@ const QUESTIONNAIRE_STRUCTURE = [
     ],
   },
   {
-    id: 'q5_apres_rencontre',
+    id: 'q5_apres_chat_en_ligne',
     category: 'Rythme & Fréquence',
     question: 'Après un chat en ligne, qu\'est-ce qui te met le plus à l\'aise ?',
     options: [

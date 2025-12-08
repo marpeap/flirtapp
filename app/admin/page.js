@@ -416,7 +416,7 @@ export default function AdminPage() {
       <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16 }}>
         Cet espace est visible uniquement pour le compte {ADMIN_EMAIL}. De
         nouvelles fonctionnalités (modération, statistiques détaillées, gestion
-        des groupes et des rencontres à plusieurs) seront ajoutées ici plus
+        des groupes et des chats en ligne à plusieurs) seront ajoutées ici plus
         tard.
       </p>
 
