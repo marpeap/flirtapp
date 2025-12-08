@@ -162,9 +162,13 @@ export default function MainNav() {
     }
   }
 
-  // Recharger les compteurs périodiquement quand l'utilisateur est connecté
+  // Recharger les compteurs quand le pathname change (navigation) ou périodiquement
   useEffect(() => {
     if (!currentUserId) return;
+    
+    // Recharger immédiatement quand on change de page
+    loadGroupInvitesCount(currentUserId);
+    loadUnreadMessagesCount(currentUserId);
     
     const interval = setInterval(() => {
       loadGroupInvitesCount(currentUserId);
@@ -172,7 +176,7 @@ export default function MainNav() {
     }, 30000); // Toutes les 30 secondes
     
     return () => clearInterval(interval);
-  }, [currentUserId]);
+  }, [currentUserId, pathname]); // Ajout de pathname comme dépendance
 
   async function handleLogout() {
     setSigningOut(true);
@@ -182,16 +186,20 @@ export default function MainNav() {
     router.push('/login');
   }
 
+  // Navigation affichée : si non connecté, uniquement Accueil
+  const navLinks = userEmail ? links : [{ href: '/', label: 'Accueil' }];
+  const showBadges = Boolean(userEmail);
+
   return (
     <header
       style={{
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(15, 15, 35, 0.85)',
-        borderBottom: '1px solid rgba(168, 85, 247, 0.15)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+        backdropFilter: 'blur(16px)',
+        backgroundColor: 'rgba(24, 24, 48, 0.72)',
+        borderBottom: '1px solid rgba(168, 85, 247, 0.08)',
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
       }}
     >
       <nav
@@ -249,7 +257,7 @@ export default function MainNav() {
             flexWrap: 'wrap',
           }}
         >
-          {links.map((link) => {
+          {navLinks.map((link) => {
             const active =
               pathname === link.href ||
               (link.href !== '/' && pathname.startsWith(link.href));
@@ -258,9 +266,9 @@ export default function MainNav() {
             let badgeCount = 0;
             let badgeColor = 'linear-gradient(135deg, #f472b6, #a855f7)';
             
-            if (link.badgeType === 'groups' && groupInvitesCount > 0) {
+            if (showBadges && link.badgeType === 'groups' && groupInvitesCount > 0) {
               badgeCount = groupInvitesCount;
-            } else if (link.badgeType === 'messages' && unreadMessagesCount > 0) {
+            } else if (showBadges && link.badgeType === 'messages' && unreadMessagesCount > 0) {
               badgeCount = unreadMessagesCount;
               badgeColor = 'linear-gradient(135deg, #10b981, #059669)';
             }

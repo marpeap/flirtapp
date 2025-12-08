@@ -98,7 +98,7 @@ export default function ProfileForm({
       </label>
 
       <label style={{ fontSize: 13 }}>
-        Tu es ouvert·e à rencontrer…
+        Tu es ouvert·e à discuter en ligne…
         <select
           value={lookingForGender}
           onChange={(e) => setLookingForGender(e.target.value)}
@@ -122,9 +122,9 @@ export default function ProfileForm({
           style={{ marginTop: 4, width: '100%' }}
         >
           <option value="">Choisir…</option>
-          <option value="friendly">Rencontres amicales</option>
-          <option value="sexy">Rencontres coquines</option>
-          <option value="wild">Rencontres sauvages</option>
+          <option value="friendly">Chats amicaux en ligne</option>
+          <option value="sexy">Chats coquins en ligne</option>
+          <option value="wild">Chats intenses en ligne</option>
         </select>
       </label>
 

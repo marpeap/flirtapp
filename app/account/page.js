@@ -228,7 +228,7 @@ export default function AccountPage() {
           >
             Ici tu règles qui peut te contacter, et ce que les autres voient
             sur toi (distance approximative, etc.). Ces choix servent surtout à
-            te donner du contrôle, comme recommandé sur les apps de rencontre
+            te donner du contrôle, comme recommandé sur les apps de chat en ligne
             modernes.
           </p>
 
@@ -345,7 +345,7 @@ export default function AccountPage() {
             }}
           >
             <li>Ne partage jamais ton adresse exacte ou des infos bancaires.</li>
-            <li>Privilégie les lieux publics pour une première rencontre.</li>
+            <li>Reste prudent·e : ne partage jamais d’informations sensibles dans un chat.</li>
             <li>
               Utilise le blocage et le signalement dès que quelqu’un dépasse
               tes limites.

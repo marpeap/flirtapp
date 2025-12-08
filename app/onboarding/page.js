@@ -217,7 +217,7 @@ export default function OnboardingPage() {
           À la création du compte, un avatar ManyLovr est choisi au hasard pour
           représenter ton profil. Tu peux ensuite le remplacer par ta propre
           photo et enrichir ton profil pour améliorer le matchmaking et les
-          rencontres à plusieurs.
+          chats en ligne de groupe.
         </p>
 
         <ProfileForm

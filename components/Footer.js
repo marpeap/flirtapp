@@ -41,7 +41,7 @@ export default function Footer() {
             Suggérer une amélioration, ou proposer de boire un café à Saint-Anne
           </Link>
           <span style={{ fontSize: 11 }}>
-            Projet en bêta, ne pas utiliser pour des rencontres à risque.
+            Projet en bêta, dédié au chat en ligne et à la création de groupes.
           </span>
         </div>
       </div>

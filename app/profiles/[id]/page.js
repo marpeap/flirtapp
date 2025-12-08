@@ -24,51 +24,51 @@ function getIcebreakersForProfile(p, myProfile) {
   // Icebreakers basés sur l'intention principale
   if (p.main_intent === 'friendly') {
     icebreakers.push(
-      'Tu serais partant·e pour organiser un groupe de sortie ensemble ?',
-      'Quelle activité tu aimerais faire en groupe ? (soirée, rando, resto, etc.)',
-      'Tu préfères les petits groupes (3-4) ou les groupes plus larges ?',
-      'On pourrait créer un cercle autour de [intérêt commun] ?'
+      'Tu serais partant·e pour ouvrir un salon de chat ensemble ?',
+      'Quel type de discussion tu aimerais animer en groupe ?',
+      'Tu préfères les petits salons (3-4) ou les groupes plus larges ?',
+      'On pourrait créer un salon autour de [intérêt commun] ?'
     );
   } else if (p.main_intent === 'sexy') {
     icebreakers.push(
-      'Tu es ouvert·e aux rencontres à plusieurs ou tu préfères en solo d\'abord ?',
-      'Qu\'est-ce qui t\'attire dans les rencontres coquines ?',
-      'Tu aimes les ambiances intimistes ou plutôt les soirées plus animées ?',
-      'On pourrait explorer ensemble si le feeling passe ?'
+      'Tu es ouvert·e aux chats de groupe en ligne ou tu préfères en privé d\'abord ?',
+      'Qu\'est-ce qui t\'attire dans les chats coquins en ligne ?',
+      'Tu aimes les ambiances intimistes ou plutôt les salons plus animés ?',
+      'On pourrait ouvrir un salon privé si le feeling passe ?'
     );
   } else if (p.main_intent === 'wild') {
     icebreakers.push(
       'Tu es plutôt team spontanéité ou tu préfères planifier un peu ?',
-      'Qu\'est-ce qui te fait vibrer dans les rencontres sauvages ?',
-      'Tu aimes les expériences intenses et directes ?',
-      'On pourrait créer une vibe électrique ensemble ?'
+      'Qu\'est-ce qui te fait vibrer dans les chats intenses en ligne ?',
+      'Tu aimes les expériences directes en salon ?',
+      'On pourrait créer une vibe électrique dans un groupe ?'
     );
   }
 
   // Icebreakers basés sur le genre
   if (p.gender === 'couple') {
     icebreakers.push(
-      'Vous cherchez plutôt d\'autres couples ou des personnes solo ?',
-      'Comment vous voyez une rencontre réussie à plusieurs ?',
-      'Vous êtes ouverts à quoi comme dynamique de groupe ?'
+      'Vous cherchez plutôt d\'autres couples ou des personnes solo pour discuter ?',
+      'Comment vous voyez un chat de groupe réussi ?',
+      'Vous êtes ouverts à quoi comme dynamique de salon ?'
     );
   }
 
   // Icebreakers basés sur la ville
   if (p.city) {
     icebreakers.push(
-      `Tu connais des bons spots à ${p.city} pour organiser quelque chose ?`,
-      `On pourrait se retrouver à ${p.city} pour voir ce qui se passe ?`,
-      `Tu es plutôt sorties en ville ou activités plus calmes à ${p.city} ?`
+      `Tu connais des bons sujets à ${p.city} pour lancer un salon ?`,
+      `On pourrait ouvrir un groupe dédié à ${p.city} pour échanger ?`,
+      `Tu es plutôt pour des salons très actifs ou plus calmes pour ${p.city} ?`
     );
   }
 
   // Icebreakers génériques adaptés au concept
   icebreakers.push(
-    'Tu préfères les rencontres en groupe ou en tête-à-tête d\'abord ?',
+    'Tu préfères les chats en groupe ou en tête-à-tête d\'abord ?',
     'Qu\'est-ce qui t\'a attiré sur ManyLovr ?',
-    'Tu as déjà testé les rencontres à plusieurs ou ce serait une première ?',
-    'On pourrait créer un groupe autour d\'un intérêt commun ?'
+    'Tu as déjà testé les chats de groupe en ligne ou ce serait une première ?',
+    'On pourrait créer un salon autour d\'un intérêt commun ?'
   );
 
   // Mélanger et retourner 5-6 icebreakers variés
@@ -647,9 +647,9 @@ export default function ProfileDetailPage() {
                 color: '#e5e7eb',
                 marginTop: 8,
               }}>
-                {profile.main_intent === 'friendly' && '🤝 Rencontres amicales'}
-                {profile.main_intent === 'sexy' && '🔥 Rencontres coquines'}
-                {profile.main_intent === 'wild' && '⚡ Rencontres sauvages'}
+                {profile.main_intent === 'friendly' && '🤝 Chats amicaux en ligne'}
+                {profile.main_intent === 'sexy' && '🔥 Chats coquins en ligne'}
+                {profile.main_intent === 'wild' && '⚡ Chats intenses en ligne'}
               </div>
             )}
           </div>

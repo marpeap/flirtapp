@@ -95,7 +95,7 @@ export default function SignUpPage() {
         <h1>Créer mon compte ManyLovr</h1>
         <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 14 }}>
           Un e‑mail et un mot de passe suffisent pour commencer. Tu pourras
-          ensuite compléter ton profil et choisir le type de rencontres que tu
+          ensuite compléter ton profil et choisir le type de chats en ligne que tu
           cherches.
         </p>
 

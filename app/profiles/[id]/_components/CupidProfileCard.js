@@ -14,7 +14,7 @@ const PROFILE_DESCRIPTIONS = {
   Happyz: {
     name: 'Happyz',
     emoji: '😊',
-    description: 'Positif et détendu, tu cherches des rencontres joyeuses et sans prise de tête.',
+    description: 'Positif et détendu, tu cherches des chats en ligne joyeux et sans prise de tête.',
     traits: ['Joyeux', 'Détendu', 'Optimiste'],
   },
   Lovers: {
@@ -38,7 +38,7 @@ const PROFILE_DESCRIPTIONS = {
   Sexyz: {
     name: 'Sexyz',
     emoji: '🔥',
-    description: 'Sensuel et direct, tu cherches des rencontres intenses et sans fioritures.',
+    description: 'Sensuel et direct, tu cherches des chats en ligne intenses et sans fioritures.',
     traits: ['Sensuel', 'Direct', 'Aventureux'],
   },
 };

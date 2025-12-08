@@ -66,7 +66,7 @@ export default function HomePage() {
                 fontWeight: 600,
               }}
             >
-              Rencontres à plusieurs • Vibes choisies
+              Chats en ligne de groupe • Vibes choisies
             </span>
           </div>
 
@@ -79,7 +79,7 @@ export default function HomePage() {
             }}
           >
             <span className="text-gradient">
-              Rencontres qui respectent
+              Chats en ligne qui respectent
             </span>
             <br />
             <span style={{ color: 'var(--color-text-primary)' }}>
@@ -151,7 +151,7 @@ export default function HomePage() {
             {[
               {
                 icon: '👥',
-                text: 'Groupes privés pour organiser des rencontres à plusieurs',
+                text: 'Groupes privés pour organiser des chats en ligne à plusieurs',
               },
               {
                 icon: '🎯',
@@ -247,7 +247,7 @@ export default function HomePage() {
               >
                 Soirées, afterworks,
                 <br />
-                rencontres complices
+                salons complices en ligne
               </h2>
               <p
                 style={{
@@ -275,7 +275,7 @@ export default function HomePage() {
                 },
                 {
                   title: 'Cercle [poly & queer friendly]',
-                  details: '8 membres • rencontres longues',
+                  details: '8 membres • chats longs en ligne',
                   color: 'var(--color-accent)',
                 },
               ].map((group, idx) => (
@@ -377,6 +377,119 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+    <footer
+        style={{
+          marginTop: 60,
+          padding: '30px 16px',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.9))',
+          borderTop: '1px solid rgba(168, 85, 247, 0.1)',
+          color: '#9ca3af',
+          fontSize: 13,
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 800,
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+          }}
+        >
+          <div
+            style={{
+              padding: '20px',
+              borderRadius: '12px',
+              background: 'rgba(168, 85, 247, 0.08)',
+              border: '1px solid rgba(168, 85, 247, 0.2)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+            }}
+          >
+            <p style={{ margin: '0 0 15px 0', fontSize: 14, color: '#e5e7eb' }}>
+              💜 ManyLovr a été développé avec passion par des Rennais engagés.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 15, flexWrap: 'wrap', marginBottom: 20 }}>
+              <a
+                href="https://buy.stripe.com/test_dR6eX1211211211211211211"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #a855f7, #f472b6)',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>💖</span> Soutenir le projet
+              </a>
+            </div>
+
+            <h3 style={{ fontSize: 16, margin: '0 0 10px 0', color: '#e5e7eb' }}>Contactez-nous</h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                alert('Message envoyé ! Merci de votre intérêt.');
+                e.target.reset();
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 400, margin: '0 auto' }}
+            >
+              <input
+                type="email"
+                placeholder="Votre email"
+                required
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  background: 'rgba(15, 15, 35, 0.8)',
+                  color: '#e5e7eb',
+                  fontSize: 13,
+                }}
+              />
+              <textarea
+                placeholder="Votre message"
+                rows="3"
+                required
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  background: 'rgba(15, 15, 35, 0.8)',
+                  color: '#e5e7eb',
+                  fontSize: 13,
+                  resize: 'vertical',
+                }}
+              ></textarea>
+              <button
+                type="submit"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #3b82f6, #10b981)',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Envoyer
+              </button>
+            </form>
+          </div>
+
+          <p style={{ margin: 0 }}>
+            © {new Date().getFullYear()} ManyLovr. Tous droits réservés.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

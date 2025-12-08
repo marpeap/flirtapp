@@ -9,18 +9,14 @@ export default function GroupsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
-  
-  // Invitations reçues
-  const [invites, setInvites] = useState([]);
-  const [invitesLoading, setInvitesLoading] = useState(false);
-  
-  // Mes propositions (groupes que j'ai créés)
-  const [myProposals, setMyProposals] = useState([]);
-  const [proposalsLoading, setProposalsLoading] = useState(false);
-  
+
+  // Liste unifiée invitations/propositions
+  const [groupItems, setGroupItems] = useState([]);
+  const [groupItemsLoading, setGroupItemsLoading] = useState(false);
+
   // Groupes actifs (conversations de groupe)
   const [activeGroups, setActiveGroups] = useState([]);
-  
+
   const [errorMsg, setErrorMsg] = useState('');
   const [actingId, setActingId] = useState(null);
   const [expandedProposal, setExpandedProposal] = useState(null);
@@ -40,12 +36,8 @@ export default function GroupsPage() {
       const userId = userData.user.id;
       setCurrentUserId(userId);
 
-      // Charger tout en parallèle
-      await Promise.all([
-        loadInvites(userId),
-        loadMyProposals(userId),
-        loadActiveGroups(userId),
-      ]);
+      await refreshGroups(userId);
+      await loadActiveGroups(userId);
 
       setLoading(false);
     }
@@ -54,166 +46,136 @@ export default function GroupsPage() {
   }, [router]);
 
   async function loadInvites(userId) {
-    setInvitesLoading(true);
-    
-    // Étape 1: Récupérer mes candidatures avec status 'invited'
-    const { data: myCandidatures, error: candError } = await supabase
+    const { data, error } = await supabase
       .from('group_match_candidates')
-      .select('id, proposal_id, status, created_at')
+      .select(`
+        id,
+        status,
+        proposal:group_match_proposals!inner (
+          id, title, created_at, creator_user_id, max_size, status, conversation_id,
+          creator:profiles!group_match_proposals_creator_user_id_fkey (
+            user_id, display_name, main_photo_url, city
+          ),
+          members:group_match_candidates (
+            id, user_id, status,
+            profile:profiles!group_match_candidates_user_id_fkey (
+              user_id, display_name, main_photo_url
+            )
+          )
+        )
+      `)
       .eq('user_id', userId)
-      .eq('status', 'invited');
+      .in('status', ['invited', 'pending', 'accepted']);
 
-    if (candError) {
-      console.error('Erreur chargement candidatures:', candError);
-      setInvites([]);
-      setInvitesLoading(false);
-      return;
+    if (error) {
+      console.error('Erreur invitations:', error);
+      setErrorMsg(error.message || 'Erreur chargement invitations.');
+      return [];
     }
 
-    if (!myCandidatures || myCandidatures.length === 0) {
-      setInvites([]);
-      setInvitesLoading(false);
-      return;
-    }
-
-    // Étape 2: Récupérer les propositions associées
-    const proposalIds = myCandidatures.map(c => c.proposal_id);
-    const { data: proposals, error: propError } = await supabase
-      .from('group_match_proposals')
-      .select('id, title, created_at, creator_user_id, max_size, status, conversation_id')
-      .in('id', proposalIds);
-
-    if (propError) {
-      console.error('Erreur chargement propositions:', propError);
-      setInvites([]);
-      setInvitesLoading(false);
-      return;
-    }
-
-    // Étape 3: Filtrer pour ne garder que les propositions où JE NE SUIS PAS le créateur
-    const invitesFromOthers = myCandidatures.filter(cand => {
-      const proposal = proposals?.find(p => p.id === cand.proposal_id);
-      return proposal && proposal.creator_user_id !== userId;
-    });
-
-    // Étape 4: Enrichir avec les infos du créateur et des autres membres
-    const enrichedInvites = await Promise.all(
-      invitesFromOthers.map(async (cand) => {
-        const proposal = proposals.find(p => p.id === cand.proposal_id);
-        
-        // Info du créateur
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('id, display_name, main_photo_url, city')
-          .eq('user_id', proposal.creator_user_id)
-          .maybeSingle();
-        
-        // Autres candidats du groupe (exclure moi-même)
-        const { data: otherCandidates } = await supabase
-          .from('group_match_candidates')
-          .select('id, user_id, status')
-          .eq('proposal_id', proposal.id)
-          .neq('user_id', userId);
-        
-        // Récupérer les profils des autres candidats
-        let otherMembers = [];
-        if (otherCandidates && otherCandidates.length > 0) {
-          const otherUserIds = otherCandidates.map(c => c.user_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, display_name, main_photo_url')
-            .in('user_id', otherUserIds);
-          
-          otherMembers = otherCandidates.map(c => {
-            const profile = profiles?.find(p => p.user_id === c.user_id);
-            return {
-              ...c,
-              display_name: profile?.display_name || 'Anonyme',
-              main_photo_url: profile?.main_photo_url,
-            };
-          });
-        }
-        
+    return (data || [])
+      .filter((cand) => cand.proposal && cand.proposal.creator_user_id !== userId && cand.proposal.status !== 'cancelled')
+      .map((cand) => {
+        const proposal = cand.proposal;
+        const others = (proposal?.members || []).filter((m) => m.user_id !== userId);
         return {
-          ...cand,
-          proposal,
-          creator: creatorProfile,
-          otherMembers,
-          acceptedCount: otherMembers.filter(m => m.status === 'accepted').length + 1, // +1 pour le créateur
-          pendingCount: otherMembers.filter(m => m.status === 'invited').length,
+          kind: 'invitation',
+          role: 'invitee',
+          id: cand.id,
+          status: cand.status,
+          proposal: {
+            id: proposal?.id,
+            title: proposal?.title,
+            created_at: proposal?.created_at,
+            creator_user_id: proposal?.creator_user_id,
+            max_size: proposal?.max_size,
+            status: proposal?.status,
+            conversation_id: proposal?.conversation_id,
+          },
+          creator: {
+            display_name: proposal?.creator?.display_name,
+            main_photo_url: proposal?.creator?.main_photo_url,
+            city: proposal?.creator?.city,
+          },
+          otherMembers: others.map((m) => ({
+            id: m.id,
+            user_id: m.user_id,
+            status: m.status,
+            display_name: m.profile?.display_name || 'Anonyme',
+            main_photo_url: m.profile?.main_photo_url || null,
+          })),
+          acceptedCount: others.filter((m) => m.status === 'accepted').length + 1, // + créateur
+          pendingCount: others.filter((m) => m.status === 'invited').length,
         };
-      })
-    );
-    
-    setInvites(enrichedInvites);
-    setInvitesLoading(false);
+      });
   }
 
   async function loadMyProposals(userId) {
-    setProposalsLoading(true);
-    
-    // Étape 1: Récupérer les propositions que J'AI CRÉÉES (creator_user_id = moi)
-    const { data: myCreatedProposals, error } = await supabase
+    const { data, error } = await supabase
       .from('group_match_proposals')
-      .select('id, title, created_at, creator_user_id, max_size, status, conversation_id')
+      .select(`
+        id, title, created_at, creator_user_id, max_size, status, conversation_id,
+        members:group_match_candidates (
+          id, user_id, status,
+          profile:profiles!group_match_candidates_user_id_fkey (
+            user_id, display_name, main_photo_url
+          )
+        )
+      `)
       .eq('creator_user_id', userId)
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erreur chargement propositions:', error);
-      setMyProposals([]);
-      setProposalsLoading(false);
-      return;
+      console.error('Erreur propositions:', error);
+      setErrorMsg(error.message || 'Erreur chargement de mes propositions.');
+      return [];
     }
 
-    if (!myCreatedProposals || myCreatedProposals.length === 0) {
-      setMyProposals([]);
-      setProposalsLoading(false);
-      return;
-    }
+    return (data || []).map((p) => {
+      const members = (p.members || []).filter((m) => m.user_id !== userId);
+      return {
+        kind: 'proposal',
+        role: 'creator',
+        id: p.id,
+        status: p.status,
+        proposal: {
+          id: p.id,
+          title: p.title,
+          created_at: p.created_at,
+          creator_user_id: p.creator_user_id,
+          max_size: p.max_size,
+          status: p.status,
+          conversation_id: p.conversation_id,
+        },
+        creator: null,
+        members: members.map((m) => ({
+          id: m.id,
+          user_id: m.user_id,
+          status: m.status,
+          display_name: m.profile?.display_name || 'Anonyme',
+          main_photo_url: m.profile?.main_photo_url || null,
+        })),
+        acceptedCount: members.filter((m) => m.status === 'accepted').length,
+        pendingCount: members.filter((m) => m.status === 'invited').length,
+        declinedCount: members.filter((m) => m.status === 'declined').length,
+      };
+    });
+  }
 
-    // Étape 2: Enrichir avec les candidats de chaque proposition
-    const enrichedProposals = await Promise.all(
-      myCreatedProposals.map(async (proposal) => {
-        // Récupérer les candidats (exclure le créateur = moi)
-        const { data: candidates } = await supabase
-          .from('group_match_candidates')
-          .select('id, user_id, status')
-          .eq('proposal_id', proposal.id)
-          .neq('user_id', userId);
-        
-        // Récupérer les profils
-        let members = [];
-        if (candidates && candidates.length > 0) {
-          const userIds = candidates.map(c => c.user_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, display_name, main_photo_url')
-            .in('user_id', userIds);
-          
-          members = candidates.map(c => {
-            const profile = profiles?.find(p => p.user_id === c.user_id);
-            return {
-              ...c,
-              display_name: profile?.display_name || 'Anonyme',
-              main_photo_url: profile?.main_photo_url,
-            };
-          });
-        }
-        
-        return {
-          ...proposal,
-          isCreator: true, // Marquer que je suis le créateur
-          members,
-          acceptedCount: members.filter(m => m.status === 'accepted').length,
-          pendingCount: members.filter(m => m.status === 'invited').length,
-          declinedCount: members.filter(m => m.status === 'declined').length,
-        };
-      })
-    );
-    
-    setMyProposals(enrichedProposals);
-    setProposalsLoading(false);
+  async function refreshGroups(userId) {
+    setGroupItemsLoading(true);
+    const [invitesList, proposalsList] = await Promise.all([
+      loadInvites(userId),
+      loadMyProposals(userId),
+    ]);
+    const combined = [...invitesList, ...proposalsList].sort((a, b) => {
+      const aDate = a.proposal?.created_at ? new Date(a.proposal.created_at).getTime() : 0;
+      const bDate = b.proposal?.created_at ? new Date(b.proposal.created_at).getTime() : 0;
+      return bDate - aDate;
+    });
+    setGroupItems(combined);
+    setGroupItemsLoading(false);
   }
 
   async function loadActiveGroups(userId) {
@@ -234,6 +196,7 @@ export default function GroupsPage() {
 
     if (error) {
       console.error('Erreur chargement groupes actifs:', error);
+      setErrorMsg(error.message || 'Erreur chargement groupes actifs.');
       setActiveGroups([]);
       return;
     }
@@ -278,11 +241,8 @@ export default function GroupsPage() {
       return;
     }
 
-    // Recharger les données
-    await Promise.all([
-      loadInvites(currentUserId),
-      loadActiveGroups(currentUserId),
-    ]);
+    await refreshGroups(currentUserId);
+    await loadActiveGroups(currentUserId);
 
     // Rediriger vers la conversation si elle existe
     if (data) {
@@ -304,11 +264,11 @@ export default function GroupsPage() {
     setActingId(null);
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(error.message || 'Erreur lors du refus de l’invitation.');
       return;
     }
 
-    await loadInvites(currentUserId);
+    await refreshGroups(currentUserId);
   }
 
   async function handleCancelProposal(proposalId) {
@@ -325,11 +285,41 @@ export default function GroupsPage() {
     setActingId(null);
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg(error.message || 'Erreur lors de l’annulation de la proposition.');
       return;
     }
 
-    await loadMyProposals(currentUserId);
+    await refreshGroups(currentUserId);
+  }
+
+  async function handleDeleteProposal(proposalId) {
+    if (!currentUserId) return;
+    if (!confirm('Supprimer définitivement cette proposition ?')) return;
+    
+    setActingId(proposalId);
+    setErrorMsg('');
+
+    // Supprimer d'abord les candidatures liées
+    await supabase
+      .from('group_match_candidates')
+      .delete()
+      .eq('proposal_id', proposalId);
+
+    // Puis supprimer la proposition
+    const { error } = await supabase
+      .from('group_match_proposals')
+      .delete()
+      .eq('id', proposalId)
+      .eq('creator_user_id', currentUserId);
+
+    setActingId(null);
+
+    if (error) {
+      setErrorMsg(error.message || 'Erreur lors de la suppression définitive.');
+      return;
+    }
+
+    await refreshGroups(currentUserId);
   }
 
   function getStatusBadge(status) {
@@ -356,8 +346,7 @@ export default function GroupsPage() {
     );
   }
 
-  const hasInvites = invites.length > 0;
-  const hasProposals = myProposals.length > 0;
+  const hasGroupItems = groupItems.length > 0;
   const hasActiveGroups = activeGroups.length > 0;
 
   return (
@@ -381,7 +370,7 @@ export default function GroupsPage() {
             👥 Mes Groupes
           </h1>
           <p style={{ fontSize: 14, color: '#9ca3af' }}>
-            Gère tes invitations et groupes de rencontres
+            Gère tes invitations et groupes de chat en ligne
           </p>
         </div>
         <Link
@@ -712,6 +701,7 @@ export default function GroupsPage() {
               const isExpanded = expandedProposal === proposal.id;
               const allAccepted = proposal.pendingCount === 0 && proposal.members.length > 0;
               const hasConversation = !!proposal.conversation_id;
+              const isCancelled = proposal.status === 'cancelled';
               
               return (
                 <div
@@ -719,12 +709,17 @@ export default function GroupsPage() {
                   className="card"
                   style={{
                     padding: '20px',
-                    background: hasConversation 
-                      ? 'rgba(16, 185, 129, 0.05)' 
-                      : 'rgba(168, 85, 247, 0.05)',
-                    border: hasConversation 
-                      ? '1px solid rgba(16, 185, 129, 0.2)'
-                      : '1px solid rgba(168, 85, 247, 0.2)',
+                    background: isCancelled
+                      ? 'rgba(107, 114, 128, 0.05)'
+                      : hasConversation 
+                        ? 'rgba(16, 185, 129, 0.05)' 
+                        : 'rgba(168, 85, 247, 0.05)',
+                    border: isCancelled
+                      ? '1px solid rgba(107, 114, 128, 0.2)'
+                      : hasConversation 
+                        ? '1px solid rgba(16, 185, 129, 0.2)'
+                        : '1px solid rgba(168, 85, 247, 0.2)',
+                    opacity: isCancelled ? 0.7 : 1,
                   }}
                 >
                   {/* En-tête */}
@@ -747,7 +742,18 @@ export default function GroupsPage() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      {hasConversation ? (
+                      {isCancelled ? (
+                        <span style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          background: 'rgba(107, 114, 128, 0.15)',
+                          border: '1px solid rgba(107, 114, 128, 0.3)',
+                          fontSize: 12,
+                          color: '#9ca3af',
+                        }}>
+                          ✗ Annulée
+                        </span>
+                      ) : hasConversation ? (
                         <span style={{
                           padding: '6px 12px',
                           borderRadius: '20px',
@@ -906,11 +912,30 @@ export default function GroupsPage() {
                             💬 Ouvrir la conversation
                           </Link>
                         )}
-                        {!hasConversation && proposal.status !== 'cancelled' && proposal.isCreator && (
+                        {!hasConversation && !isCancelled && proposal.isCreator && (
                           <button
                             type="button"
                             disabled={actingId === proposal.id}
                             onClick={() => handleCancelProposal(proposal.id)}
+                            style={{
+                              padding: '10px 20px',
+                              borderRadius: '12px',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              color: '#fbbf24',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: actingId === proposal.id ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            Annuler la proposition
+                          </button>
+                        )}
+                        {isCancelled && proposal.isCreator && (
+                          <button
+                            type="button"
+                            disabled={actingId === proposal.id}
+                            onClick={() => handleDeleteProposal(proposal.id)}
                             style={{
                               padding: '10px 20px',
                               borderRadius: '12px',
@@ -922,7 +947,7 @@ export default function GroupsPage() {
                               cursor: actingId === proposal.id ? 'not-allowed' : 'pointer',
                             }}
                           >
-                            Annuler la proposition
+                            🗑️ Supprimer définitivement
                           </button>
                         )}
                       </div>

@@ -12,7 +12,7 @@ const QUESTIONNAIRE_STRUCTURE = [
     category: 'Intention & Valeurs',
     question: 'Quel type de lien cherches-tu en priorité ?',
     options: [
-      { value: 'ponctuel', label: 'Rencontres ponctuelles, sans engagement' },
+      { value: 'ponctuel', label: 'Chats ponctuels en ligne, sans engagement' },
       { value: 'regulier_sans_etiquette', label: 'Relation régulière sans étiquette forte' },
       { value: 'exclusive', label: 'Relation exclusive / engagée' },
       { value: 'poly_ouvert', label: 'Polyamour / relation ouverte' },
@@ -33,7 +33,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q3_identite_min',
     category: 'Intention & Valeurs',
-    question: 'De quoi as-tu besoin comme infos minimales avant de rencontrer quelqu\'un ?',
+    question: 'De quoi as-tu besoin comme infos minimales avant de chatter avec quelqu\'un ?',
     options: [
       { value: 'quasi_anon', label: 'Presque rien, je peux rester quasi anonyme' },
       { value: 'prenom_quelques_infos', label: 'Prénom + quelques infos de base' },
@@ -43,7 +43,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q4_frequence',
     category: 'Rythme & Fréquence',
-    question: 'À quelle fréquence idéale imagines-tu les rencontres physiques (solo ou à plusieurs) ?',
+    question: 'À quelle fréquence idéale imagines-tu les sessions de chat (solo ou en groupe) ?',
     options: [
       { value: 'tres_ponctuel', label: 'Très ponctuel (occasionnel, rare)' },
       { value: 'mensuel', label: 'Environ 1× par mois' },
@@ -54,7 +54,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q5_apres_rencontre',
     category: 'Rythme & Fréquence',
-    question: 'Après une rencontre, qu\'est-ce qui te met le plus à l\'aise ?',
+    question: 'Après un chat en ligne, qu\'est-ce qui te met le plus à l\'aise ?',
     options: [
       { value: 'chacun_chez_soi', label: 'Chacun reprend sa vie sans obligation' },
       { value: 'petit_debrief', label: 'Un petit message / débrief sympa' },
@@ -115,7 +115,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q11_communication',
     category: 'Communication',
-    question: 'Comment préfères-tu communiquer avant et après les rencontres ?',
+    question: 'Comment préfères-tu communiquer avant et après les chats en ligne ?',
     options: [
       { value: 'minimal', label: 'Minimal, juste pour organiser' },
       { value: 'modere', label: 'Modéré, quelques messages sympas' },
@@ -125,7 +125,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q12_ambiance',
     category: 'Ambiance',
-    question: 'Quelle ambiance préfères-tu pour les rencontres ?',
+    question: 'Quelle ambiance préfères-tu pour les chats en ligne ?',
     options: [
       { value: 'intime_discret', label: 'Intime et discrète' },
       { value: 'detendue', label: 'Détendue et naturelle' },
@@ -136,7 +136,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q13_experience_groupe',
     category: 'Expérience',
-    question: 'Quelle est ton expérience avec les rencontres à plusieurs ?',
+    question: 'Quelle est ton expérience avec les chats de groupe en ligne ?',
     options: [
       { value: 'debutant', label: 'Débutant·e, curieux·se d\'essayer' },
       { value: 'quelques_fois', label: 'Quelques fois, j\'ai testé' },
@@ -146,7 +146,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q14_boundaries',
     category: 'Limites & Boundaries',
-    question: 'L\'établissement de limites claires avant une rencontre est-il important pour toi ?',
+    question: 'L\'établissement de limites claires avant un chat en ligne est-il important pour toi ?',
     options: [
       { value: 'tres_important', label: 'Très important, je veux que ce soit clair' },
       { value: 'important', label: 'Important, on peut en discuter' },
@@ -157,7 +157,7 @@ const QUESTIONNAIRE_STRUCTURE = [
   {
     id: 'q15_lieu',
     category: 'Préférences',
-    question: 'Où préfères-tu rencontrer les gens ?',
+    question: 'Comment préfères-tu organiser tes échanges en ligne ?',
     options: [
       { value: 'chez_moi', label: 'Chez moi' },
       { value: 'chez_lui', label: 'Chez l\'autre personne' },

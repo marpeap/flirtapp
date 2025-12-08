@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
@@ -41,12 +41,28 @@ export default function ProfilesListPage() {
 
   // Push Éclair
   const [pushOpen, setPushOpen] = useState(false);
-  const [pushImageFile, setPushImageFile] = useState(null);
+  const [pushVoiceFile, setPushVoiceFile] = useState(null);
+  const [pushVoiceDuration, setPushVoiceDuration] = useState(null); // en secondes
   const [pushSending, setPushSending] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushInfo, setPushInfo] = useState('');
   const [pushCredits, setPushCredits] = useState(0);
   const [selectedPack, setSelectedPack] = useState('1x'); // '1x' ou '3x'
+  const pushMediaRecorderRef = useRef(null);
+  const pushChunksRef = useRef([]);
+  const pushTimerRef = useRef(null);
+  const pushStreamRef = useRef(null);
+
+  // Cleanup en cas de démontage
+  useEffect(() => {
+    return () => {
+      if (pushTimerRef.current) clearInterval(pushTimerRef.current);
+      if (pushStreamRef.current) {
+        pushStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (pushAudioUrl) URL.revokeObjectURL(pushAudioUrl);
+    };
+  }, [pushAudioUrl]);
 
   // Sélection pour match de groupe
   const [selectedProfileIds, setSelectedProfileIds] = useState([]);
@@ -471,7 +487,8 @@ export default function ProfilesListPage() {
   function openPush() {
     setPushError('');
     setPushInfo('');
-    setPushImageFile(null);
+    setPushVoiceFile(null);
+    setPushVoiceDuration(null);
     setPushOpen(true);
   }
 
@@ -598,10 +615,106 @@ export default function ProfilesListPage() {
     }
   }
 
+  // --- Enregistrement vocal Push Éclair ---
+  async function startPushRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPushError('Enregistrement vocal non supporté sur ce navigateur.');
+      return;
+    }
+    try {
+      setPushError('');
+      setPushInfo('');
+      setPushAudioBlob(null);
+      if (pushAudioUrl) {
+        URL.revokeObjectURL(pushAudioUrl);
+        setPushAudioUrl(null);
+      }
+      setPushVoiceDuration(0);
+      pushChunksRef.current = [];
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      pushStreamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+      pushMediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) pushChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(pushChunksRef.current, { type: 'audio/webm' });
+        setPushAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setPushAudioUrl(url);
+        if (pushStreamRef.current) {
+          pushStreamRef.current.getTracks().forEach((t) => t.stop());
+          pushStreamRef.current = null;
+        }
+        setPushRecording(false);
+      };
+
+      mediaRecorder.start();
+      setPushRecording(true);
+      setPushVoiceDuration(0);
+
+      pushTimerRef.current = setInterval(() => {
+        setPushVoiceDuration((d) => {
+          const next = d + 1;
+          if (next >= 20) {
+            stopPushRecording();
+            return 20;
+          }
+          return next;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error('Erreur micro Push Éclair:', err);
+      setPushError(`Micro inaccessible (${err?.name || 'erreur'}). Autorise l'accès et réessaie.`);
+      if (pushStreamRef.current) {
+        pushStreamRef.current.getTracks().forEach((t) => t.stop());
+        pushStreamRef.current = null;
+      }
+      setPushRecording(false);
+    }
+  }
+
+  function stopPushRecording() {
+    if (pushMediaRecorderRef.current && pushRecording) {
+      pushMediaRecorderRef.current.stop();
+    }
+    if (pushTimerRef.current) {
+      clearInterval(pushTimerRef.current);
+      pushTimerRef.current = null;
+    }
+    if (pushStreamRef.current) {
+      pushStreamRef.current.getTracks().forEach((t) => t.stop());
+      pushStreamRef.current = null;
+    }
+    setPushRecording(false);
+  }
+
+  function cancelPushRecording() {
+    stopPushRecording();
+    if (pushAudioUrl) {
+      URL.revokeObjectURL(pushAudioUrl);
+    }
+    setPushAudioUrl(null);
+    setPushAudioBlob(null);
+    setPushVoiceDuration(0);
+    pushChunksRef.current = [];
+  }
+
   async function handleSendPush() {
     if (!currentUserId || !ownProfile) return;
-    if (!pushImageFile) {
-      setPushError('Choisis une image avant d’envoyer ton Push Éclair.');
+    if (!pushAudioBlob) {
+      setPushError('Enregistre un vocal avant d’envoyer ton Push Éclair.');
+      return;
+    }
+    if (pushVoiceDuration && pushVoiceDuration > 20) {
+      setPushError('Le vocal doit durer 20 secondes maximum.');
       return;
     }
     if (pushCredits <= 0) {
@@ -615,12 +728,11 @@ export default function ProfilesListPage() {
     setPushError('');
     setPushInfo('');
 
-    const ext = pushImageFile.name.split('.').pop();
-    const path = `pushes/${currentUserId}/${Date.now()}.${ext}`;
+    const path = `pushes/${currentUserId}/${Date.now()}.webm`;
 
     const { error: uploadError } = await supabase.storage
-      .from('push_eclair')
-      .upload(path, pushImageFile, { upsert: true });
+      .from('voice-messages')
+      .upload(path, pushAudioBlob, { upsert: true, contentType: pushAudioBlob.type || 'audio/webm' });
 
     if (uploadError) {
       setPushSending(false);
@@ -629,10 +741,10 @@ export default function ProfilesListPage() {
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from('push_eclair')
+      .from('voice-messages')
       .getPublicUrl(path);
 
-    const imageUrl = publicUrlData.publicUrl;
+    const voiceUrl = publicUrlData.publicUrl;
 
     const { data: nearby, error: nearErr } = await supabase.rpc(
       'nearby_profiles',
@@ -664,7 +776,7 @@ export default function ProfilesListPage() {
       .from('push_eclair_broadcasts')
       .insert({
         sender_id: currentUserId,
-        image_url: imageUrl,
+        image_url: voiceUrl, // réutilise la colonne existante pour stocker le vocal
         radius_km: 30,
         recipients_count: candidates.length,
       })
@@ -754,8 +866,10 @@ export default function ProfilesListPage() {
         .insert({
           conversation_id: conversationId,
           sender_id: currentUserId,
-          content: 'Push Éclair 💥',
-          image_url: imageUrl,
+          content: 'Push Éclair vocal 🔊',
+          message_type: 'voice',
+          voice_url: voiceUrl,
+          voice_duration: pushVoiceDuration || null,
         })
         .select('id')
         .single();
@@ -1025,7 +1139,7 @@ export default function ProfilesListPage() {
             marginBottom: 6,
           }}>
             <span>🎯</span>
-            Type de rencontre
+            Type de chat en ligne
           </label>
           <select
             value={filterIntent}
@@ -1740,9 +1854,9 @@ export default function ProfilesListPage() {
                               marginTop: 4,
                             }}
                           >
-                            {p.main_intent === 'friendly' && '🤝 Rencontres amicales'}
-                            {p.main_intent === 'sexy' && '🔥 Rencontres coquines'}
-                            {p.main_intent === 'wild' && '⚡ Rencontres sauvages'}
+                            {p.main_intent === 'friendly' && '🤝 Chats amicaux en ligne'}
+                            {p.main_intent === 'sexy' && '🔥 Chats coquins en ligne'}
+                            {p.main_intent === 'wild' && '⚡ Chats intenses en ligne'}
                           </div>
                         )}
                       </div>
@@ -1968,7 +2082,7 @@ export default function ProfilesListPage() {
 
             <h2 style={{ fontSize: 18, marginBottom: 6 }}>Push Éclair</h2>
             <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
-              Dépense 1 Push Éclair pour envoyer une photo à jusqu'à 100
+              Dépense 1 Push Éclair pour envoyer un vocal (max 20s) à jusqu'à 100
               personnes dans un rayon de 30 km autour de toi.
             </p>
 
@@ -2072,14 +2186,40 @@ export default function ProfilesListPage() {
                 gap: 4,
               }}
             >
-              Choisis la photo à envoyer
+              Choisis un vocal à envoyer (max 20 secondes)
               <input
                 type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setPushImageFile(e.target.files?.[0] || null)
-                }
+                accept="audio/*"
+                onChange={(e) => {
+                  setPushError('');
+                  const file = e.target.files?.[0] || null;
+                  setPushVoiceFile(file);
+                  setPushVoiceDuration(null);
+                  if (file) {
+                    const url = URL.createObjectURL(file);
+                    const audio = new Audio(url);
+                    audio.onloadedmetadata = () => {
+                      const dur = audio.duration || 0;
+                      setPushVoiceDuration(Math.round(dur * 1000) / 1000);
+                      URL.revokeObjectURL(url);
+                      if (dur > 20) {
+                        setPushError('Le vocal doit durer 20 secondes maximum.');
+                        setPushVoiceFile(null);
+                      }
+                    };
+                    audio.onerror = () => {
+                      URL.revokeObjectURL(url);
+                      setPushError('Impossible de lire ce fichier audio.');
+                      setPushVoiceFile(null);
+                    };
+                  }
+                }}
               />
+              {pushVoiceDuration !== null && (
+                <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                  Durée détectée : {pushVoiceDuration.toFixed(1)}s
+                </span>
+              )}
             </label>
 
             {pushError && (
@@ -2096,14 +2236,14 @@ export default function ProfilesListPage() {
             <button
               type="button"
               onClick={handleSendPush}
-              disabled={pushSending}
+              disabled={pushSending || !pushAudioBlob}
               style={{
                 marginTop: 'auto',
                 backgroundImage:
                   'linear-gradient(135deg, #facc15, #fb7185)',
               }}
             >
-              {pushSending ? 'Envoi en cours…' : 'Envoyer mon Push Éclair'}
+              {pushSending ? 'Envoi en cours…' : 'Envoyer mon Push Éclair vocal'}
             </button>
           </div>
         </div>

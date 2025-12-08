@@ -13,7 +13,7 @@ export default function LegalPage() {
           <h2>1. Objet du service</h2>
           <p style={{ fontSize: 14 }}>
             Ce site permet à des adultes de créer un profil, parcourir d’autres
-            profils et échanger des messages privés dans le but de rencontres
+            profils et échanger des messages privés dans le but de chat en ligne et création de groupes
             amicales, romantiques ou sexuelles consenties.
           </p>
         </section>
@@ -53,7 +53,7 @@ export default function LegalPage() {
           <p style={{ fontSize: 14 }}>
             Le site ne vérifie pas l’identité réelle des membres et ne garantit
             pas la sincérité des profils. Tu restes pleinement responsable de
-            tes rencontres et échanges, notamment lors de rendez-vous physiques.
+            tes échanges et groupes en ligne, notamment lors d’éventuelles mises en relation.
           </p>
         </section>
 

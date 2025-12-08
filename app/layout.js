@@ -8,13 +8,15 @@ export const metadata = {
     default: 'ManyLovr',
   },
   description:
-    "ManyLovr est une app de rencontres pensée pour les connexions à plusieurs, les groupes affinitaires et les rencontres qualitatives.",
+    "ManyLovr est une app de chat en ligne pensée pour les connexions à plusieurs, les groupes affinitaires et les échanges qualitatifs.",
   metadataBase: new URL('https://manylovr.com'),
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  },
+};
+
+// Viewport (export dédié Next.js)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }) {
