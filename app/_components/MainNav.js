@@ -29,12 +29,11 @@ export default function MainNav() {
     async function loadUser() {
       const {
         data: { user },
-      } = await supabase.auth.getUser(); // lecture initiale [web:965]
+      } = await supabase.auth.getUser();
       if (!mounted) return;
       setUserEmail(user?.email ?? null);
       setCurrentUserId(user?.id ?? null);
       
-      // Charger le nombre d'invitations de groupe et messages non lus
       if (user?.id) {
         loadGroupInvitesCount(user.id);
         loadUnreadMessagesCount(user.id);
@@ -57,7 +56,7 @@ export default function MainNav() {
         setGroupInvitesCount(0);
         setUnreadMessagesCount(0);
       }
-    }); // se met à jour à chaque login/logout [web:959]
+    });
 
     return () => {
       mounted = false;
@@ -68,7 +67,6 @@ export default function MainNav() {
   async function loadGroupInvitesCount(userId) {
     if (!userId) return;
     
-    // Étape 1: Récupérer mes candidatures avec status 'invited'
     const { data: myCandidatures, error: candError } = await supabase
       .from('group_match_candidates')
       .select('id, proposal_id')
@@ -80,7 +78,6 @@ export default function MainNav() {
       return;
     }
 
-    // Étape 2: Récupérer les propositions pour vérifier qui est le créateur
     const proposalIds = myCandidatures.map(c => c.proposal_id);
     const { data: proposals, error: propError } = await supabase
       .from('group_match_proposals')
@@ -92,7 +89,6 @@ export default function MainNav() {
       return;
     }
 
-    // Étape 3: Compter uniquement les invitations où je NE suis PAS le créateur
     const realInvitesCount = myCandidatures.filter(cand => {
       const proposal = proposals.find(p => p.id === cand.proposal_id);
       return proposal && proposal.creator_user_id !== userId;
@@ -105,7 +101,6 @@ export default function MainNav() {
     if (!userId) return;
     
     try {
-      // Récupérer les conversations où l'utilisateur est participant
       const { data: parts, error: partErr } = await supabase
         .from('conversation_participants')
         .select('conversation_id, last_read_at')
@@ -113,7 +108,6 @@ export default function MainNav() {
         .eq('active', true);
       
       if (partErr || !parts || parts.length === 0) {
-        // Fallback: chercher dans conversations directement
         const { data: convs } = await supabase
           .from('conversations')
           .select('id')
@@ -124,7 +118,6 @@ export default function MainNav() {
           return;
         }
         
-        // Compter les messages non lus (messages des autres utilisateurs récents)
         const convIds = convs.map(c => c.id);
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
@@ -139,7 +132,6 @@ export default function MainNav() {
         return;
       }
       
-      // Compter les messages non lus par conversation
       let totalUnread = 0;
       
       for (const part of parts) {
@@ -162,98 +154,87 @@ export default function MainNav() {
     }
   }
 
-  // Recharger les compteurs quand le pathname change (navigation) ou périodiquement
   useEffect(() => {
     if (!currentUserId) return;
     
-    // Recharger immédiatement quand on change de page
     loadGroupInvitesCount(currentUserId);
     loadUnreadMessagesCount(currentUserId);
     
     const interval = setInterval(() => {
       loadGroupInvitesCount(currentUserId);
       loadUnreadMessagesCount(currentUserId);
-    }, 30000); // Toutes les 30 secondes
+    }, 30000);
     
     return () => clearInterval(interval);
-  }, [currentUserId, pathname]); // Ajout de pathname comme dépendance
+  }, [currentUserId, pathname]);
 
   async function handleLogout() {
     setSigningOut(true);
-    await supabase.auth.signOut(); // [web:962]
+    await supabase.auth.signOut();
     setSigningOut(false);
     setUserEmail(null);
     router.push('/login');
   }
 
-  // Navigation affichée : si non connecté, uniquement Accueil
   const navLinks = userEmail ? links : [{ href: '/', label: 'Accueil' }];
   const showBadges = Boolean(userEmail);
 
   return (
     <header className="app-header">
       <nav className="app-nav">
-        {/* Logo */}
-        <Link href="/" className="app-logo-link fade-in">
-          <span className="app-logo-mark">
-            <span style={{ fontSize: 18 }}>💜</span>
-          </span>
-          <span className="text-gradient" style={{ fontSize: 18 }}>
-            ManyLovr
-          </span>
-        </Link>
+        <div className="app-nav-left">
+          <Link href="/" className="app-logo-link fade-in">
+            <span className="app-logo-mark">
+              <span style={{ fontSize: 18 }}>💜</span>
+            </span>
+            <span className="text-gradient" style={{ fontSize: 18 }}>
+              ManyLovr
+            </span>
+          </Link>
 
-        <div className="app-nav-links">
-          {navLinks.map((link) => {
-            const active =
-              pathname === link.href ||
-              (link.href !== '/' && pathname.startsWith(link.href));
-            
-            // Déterminer le badge à afficher
-            let badgeCount = 0;
-            let badgeColor = 'linear-gradient(135deg, #f472b6, #a855f7)';
-            
-            if (showBadges && link.badgeType === 'groups' && groupInvitesCount > 0) {
-              badgeCount = groupInvitesCount;
-            } else if (showBadges && link.badgeType === 'messages' && unreadMessagesCount > 0) {
-              badgeCount = unreadMessagesCount;
-              badgeColor = 'linear-gradient(135deg, #10b981, #059669)';
-            }
-            
-            const showBadge = badgeCount > 0;
-            
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`app-nav-link ${active ? 'active' : ''}`}
-              >
-                {link.label}
-                {showBadge && (
-                  <span
-                    className={`app-nav-badge ${link.badgeType === 'messages' ? 'success' : ''}`}
-                    style={{ background: badgeColor }}
-                  >
-                    {badgeCount > 9 ? '9+' : badgeCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          <div className="app-nav-links">
+            {navLinks.map((link) => {
+              const active =
+                pathname === link.href ||
+                (link.href !== '/' && pathname.startsWith(link.href));
 
+              let badgeCount = 0;
+              let badgeColor = 'linear-gradient(135deg, #f472b6, #a855f7)';
+
+              if (showBadges && link.badgeType === 'groups' && groupInvitesCount > 0) {
+                badgeCount = groupInvitesCount;
+              } else if (showBadges && link.badgeType === 'messages' && unreadMessagesCount > 0) {
+                badgeCount = unreadMessagesCount;
+                badgeColor = 'linear-gradient(135deg, #10b981, #059669)';
+              }
+
+              const showBadge = badgeCount > 0;
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`app-nav-link ${active ? 'active' : ''}`}
+                >
+                  {link.label}
+                  {showBadge && (
+                    <span
+                      className={`app-nav-badge ${link.badgeType === 'messages' ? 'success' : ''}`}
+                      style={{ background: badgeColor }}
+                    >
+                      {badgeCount > 9 ? '9+' : badgeCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="app-nav-actions">
           {userEmail ? (
             <div className="app-nav-user">
-              <span
-                style={{
-                  fontSize: 'clamp(10px, 2vw, 12px)',
-                  color: 'var(--color-text-muted)',
-                  maxWidth: 'clamp(100px, 20vw, 180px)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={userEmail}
-              >
+              <span className="app-nav-user-mail" title={userEmail}>
                 {userEmail}
               </span>
               <button
@@ -266,10 +247,7 @@ export default function MainNav() {
               </button>
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="btn-primary"
-            >
+            <Link href="/login" className="btn-primary">
               Connexion
             </Link>
           )}
@@ -278,4 +256,3 @@ export default function MainNav() {
     </header>
   );
 }
-

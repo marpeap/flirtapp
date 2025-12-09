@@ -41,7 +41,9 @@ export default function ProfilesListPage() {
 
   // Push Éclair
   const [pushOpen, setPushOpen] = useState(false);
-  const [pushVoiceFile, setPushVoiceFile] = useState(null);
+  const [pushAudioBlob, setPushAudioBlob] = useState(null);
+  const [pushAudioUrl, setPushAudioUrl] = useState(null);
+  const [pushRecording, setPushRecording] = useState(false);
   const [pushVoiceDuration, setPushVoiceDuration] = useState(null); // en secondes
   const [pushSending, setPushSending] = useState(false);
   const [pushError, setPushError] = useState('');

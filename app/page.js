@@ -407,7 +407,7 @@ export default function HomePage() {
             }}
           >
             <p style={{ margin: '0 0 15px 0', fontSize: 14, color: '#e5e7eb' }}>
-              💜 ManyLovr a été développé avec passion par des Rennais engagés.
+              💜 ManyLovr est un réseau social inclusif développé avec passion par des Rennais engagés.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, flexWrap: 'wrap', marginBottom: 20 }}>
               <a
