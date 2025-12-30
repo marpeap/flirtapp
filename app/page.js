@@ -1,10 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import StatsWidget from './_components/StatsWidget';
 
 export default function HomePage() {
   const router = useRouter();
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportAmount, setSupportAmount] = useState(0.99);
+
+  const supportOptions = [0.49, 0.99, 1.49, 1.99, 2.99, 3.99, 4.99, 5.99, 7.99, 9.99];
+
+  const openSupport = () => setSupportOpen(true);
+  const closeSupport = () => setSupportOpen(false);
+  const confirmSupport = () => {
+    closeSupport();
+    alert(`Merci pour ton soutien de ${supportAmount.toFixed(2)} € 💜`);
+  };
 
   return (
     <main
@@ -410,25 +422,25 @@ export default function HomePage() {
               💜 ManyLovr est un réseau social inclusif développé avec passion par des Rennais engagés.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, flexWrap: 'wrap', marginBottom: 20 }}>
-              <a
-                href="https://buy.stripe.com/test_dR6eX1211211211211211211"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={openSupport}
                 style={{
                   padding: '10px 20px',
                   borderRadius: '10px',
                   background: 'linear-gradient(135deg, #a855f7, #f472b6)',
                   color: '#fff',
-                  textDecoration: 'none',
                   fontSize: 14,
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
+                  border: 'none',
+                  cursor: 'pointer',
                 }}
               >
                 <span>💖</span> Soutenir le projet
-              </a>
+              </button>
             </div>
 
             <h3 style={{ fontSize: 16, margin: '0 0 10px 0', color: '#e5e7eb' }}>Contactez-nous</h3>
@@ -490,6 +502,129 @@ export default function HomePage() {
           </p>
         </div>
       </footer>
+
+      {/* Modal de support */}
+      {supportOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            padding: 16,
+          }}
+          onClick={closeSupport}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1a1a2e, #0f0f23)',
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 360,
+              width: '100%',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: 20,
+                fontWeight: 700,
+                color: '#fff',
+                textAlign: 'center',
+              }}
+            >
+              💜 Soutenir ManyLovr
+            </h2>
+            <p
+              style={{
+                margin: '0 0 20px 0',
+                fontSize: 13,
+                color: '#9ca3af',
+                textAlign: 'center',
+              }}
+            >
+              Choisis le montant de ton soutien
+            </p>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 10,
+                marginBottom: 20,
+              }}
+            >
+              {supportOptions.map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setSupportAmount(amount)}
+                  style={{
+                    padding: '12px 8px',
+                    borderRadius: 10,
+                    border: supportAmount === amount
+                      ? '2px solid #a855f7'
+                      : '1px solid rgba(168, 85, 247, 0.2)',
+                    background: supportAmount === amount
+                      ? 'rgba(168, 85, 247, 0.2)'
+                      : 'rgba(26, 26, 46, 0.6)',
+                    color: supportAmount === amount ? '#c084fc' : '#e5e7eb',
+                    fontSize: 15,
+                    fontWeight: supportAmount === amount ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {amount.toFixed(2)} €
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={closeSupport}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(168, 85, 247, 0.2)',
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmSupport}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #a855f7, #f472b6)',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Confirmer 💖
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -1,6 +1,7 @@
 // app/layout.js
 import './globals.css';
-import MainNav from './_components/MainNav';
+import Sidebar from './_components/Sidebar';
+import Loading from './_components/Loading';
 
 export const metadata = {
   title: {
@@ -23,7 +24,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body>
-        <MainNav />
+        <Loading />
+        <Sidebar />
         <main>{children}</main>
       </body>
     </html>
