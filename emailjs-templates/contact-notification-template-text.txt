@@ -1,0 +1,177 @@
+NOUVELLE DEMANDE DE CONTACT - MANYLOVR
+
+Bonjour Marpeap,
+
+Une nouvelle demande de contact a été reçue sur ManyLovr :
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 INFORMATIONS DU FORMULAIRE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 TÉLÉPHONE (normalisé)
+{{phone}}
+
+{{#phone_original}}
+📱 TÉLÉPHONE (original)
+{{phone_original}}
+{{/phone_original}}
+
+💬 MESSAGE
+{{message}}
+
+📄 PAGE SOURCE
+{{source_page}}
+
+📅 DATE ET HEURE
+{{date}} {{#timestamp}}({{timestamp}}){{/timestamp}}
+
+{{#website_trap}}
+⚠️ SPAM DÉTECTÉ (honeypot)
+Valeur: {{website_trap}}
+{{/website_trap}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 INFORMATIONS UTILISATEUR (si connecté)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#user_id}}
+🆔 USER ID
+{{user_id}}
+
+{{#user_email}}
+📧 EMAIL
+{{user_email}}
+{{/user_email}}
+
+{{#display_name}}
+👋 PSEUDO
+{{display_name}}
+{{/display_name}}
+
+{{#gender}}
+⚧️ GENRE
+{{gender}}
+{{/gender}}
+
+{{#main_intent}}
+💝 INTENTION PRINCIPALE
+{{main_intent}}
+{{/main_intent}}
+
+{{#bio}}
+📝 BIO
+{{bio}}
+{{/bio}}
+
+{{#main_photo_url}}
+🖼️ PHOTO DE PROFIL
+{{main_photo_url}}
+{{/main_photo_url}}
+{{/user_id}}
+
+{{^user_id}}
+👤 UTILISATEUR
+Visiteur anonyme
+{{/user_id}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 LOCALISATION DU PROFIL UTILISATEUR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#user_lat}}{{#user_lng}}
+{{#user_city}}
+🏙️ VILLE
+{{user_city}}
+{{/user_city}}
+
+🌐 COORDONNÉES GPS
+Latitude: {{user_lat}}
+Longitude: {{user_lng}}
+
+🗺️ LIENS MAPS
+Google Maps: https://www.google.com/maps?q={{user_lat}},{{user_lng}}
+OpenStreetMap: https://www.openstreetmap.org/?mlat={{user_lat}}&mlon={{user_lng}}&zoom=15
+{{/user_lng}}{{/user_lat}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗺️ SÉLECTION SUR LA CARTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#map_lat}}{{#map_lng}}
+{{#map_address}}
+📍 ADRESSE SÉLECTIONNÉE
+{{map_address}}
+{{/map_address}}
+
+🌐 COORDONNÉES SÉLECTIONNÉES
+Latitude: {{map_lat}}
+Longitude: {{map_lng}}
+
+{{#map_radius_km}}
+📏 RAYON DE RECHERCHE
+{{map_radius_km}} km
+{{/map_radius_km}}
+
+{{#map_zoom_level}}
+🔍 NIVEAU DE ZOOM
+{{map_zoom_level}}
+{{/map_zoom_level}}
+
+🗺️ LIEN MAPS
+Google Maps: https://www.google.com/maps?q={{map_lat}},{{map_lng}}
+{{/map_lng}}{{/map_lat}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📡 GÉOLOCALISATION ACTUELLE (navigateur/appareil)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#geolocation_lat}}{{#geolocation_lng}}
+{{#geolocation_city}}
+🏙️ VILLE DÉTECTÉE
+{{geolocation_city}}
+{{/geolocation_city}}
+
+{{#geolocation_locality}}
+📍 LOCALITÉ
+{{geolocation_locality}}
+{{/geolocation_locality}}
+
+{{#geolocation_country}}
+🌍 PAYS
+{{geolocation_country}}
+{{/geolocation_country}}
+
+{{#geolocation_address}}
+📍 ADRESSE COMPLÈTE
+{{geolocation_address}}
+{{/geolocation_address}}
+
+🌐 COORDONNÉES GPS
+Latitude: {{geolocation_lat}}
+Longitude: {{geolocation_lng}}
+
+🗺️ LIEN MAPS
+Google Maps: https://www.google.com/maps?q={{geolocation_lat}},{{geolocation_lng}}
+{{/geolocation_lng}}{{/geolocation_lat}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 INFORMATIONS TECHNIQUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#ip_address}}
+🌐 ADRESSE IP
+{{ip_address}}
+{{/ip_address}}
+
+{{#user_agent}}
+💻 USER AGENT
+{{user_agent}}
+{{/user_agent}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tu peux répondre directement en appelant le {{phone}}{{#user_email}} ou par email à {{user_email}}{{/user_email}}.
+
+ManyLovr - Système de contact automatique
+{{#timestamp}}ID de requête: {{timestamp}}{{/timestamp}}
+

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouvelle demande de contact - ManyLovr</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 30px 20px; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; text-align: center;">
+                📬 Nouvelle demande de contact
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px;">
+              <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                Bonjour Marpeap,
+              </p>
+              
+              <p style="margin: 0 0 25px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                Une nouvelle demande de contact a été reçue sur ManyLovr :
+              </p>
+
+              <!-- SECTION 1: Informations du formulaire -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-left: 4px solid #a855f7; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">📝 Informations du formulaire</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📱 Téléphone (normalisé)</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 16px; font-weight: 600;">
+                            {{phone}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{#phone_original}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📱 Téléphone (original)</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{phone_original}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/phone_original}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">💬 Message</strong>
+                          <p style="margin: 8px 0 0 0; color: #111827; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">
+{{message}}
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📄 Page source</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{source_page}}
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📅 Date et heure</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{date}} {{#timestamp}}({{timestamp}}){{/timestamp}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{#website_trap}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #dc2626; background-color: #fee2e2;">
+                          <strong style="color: #dc2626; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">⚠️ SPAM DÉTECTÉ (honeypot)</strong>
+                          <p style="margin: 4px 0 0 0; color: #991b1b; font-size: 14px;">
+                            Valeur: {{website_trap}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/website_trap}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- SECTION 2: Informations utilisateur (si connecté) -->
+              {{#user_id}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">👤 Informations utilisateur connecté</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🆔 User ID</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px; font-family: monospace;">
+                            {{user_id}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{#user_email}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📧 Email</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{user_email}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/user_email}}
+                      {{#display_name}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">👋 Pseudo</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{display_name}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/display_name}}
+                      {{#gender}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">⚧️ Genre</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{gender}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/gender}}
+                      {{#main_intent}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">💝 Intention principale</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{main_intent}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/main_intent}}
+                      {{#bio}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📝 Bio</strong>
+                          <p style="margin: 8px 0 0 0; color: #111827; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
+{{bio}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/bio}}
+                      {{#main_photo_url}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🖼️ Photo de profil</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            <a href="{{main_photo_url}}" style="color: #3b82f6; text-decoration: none;">{{main_photo_url}}</a>
+                          </p>
+                        </td>
+                      </tr>
+                      {{/main_photo_url}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              {{/user_id}}
+
+              <!-- SECTION 3: Localisation utilisateur (profil) -->
+              {{#user_lat}}{{#user_lng}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">📍 Localisation du profil utilisateur</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      {{#user_city}}
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🏙️ Ville</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 16px; font-weight: 600;">
+                            {{user_city}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/user_city}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🌐 Coordonnées GPS</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            Latitude: <strong>{{user_lat}}</strong><br>
+                            Longitude: <strong>{{user_lng}}</strong>
+                          </p>
+                          <p style="margin: 8px 0 0 0;">
+                            <a href="https://www.google.com/maps?q={{user_lat}},{{user_lng}}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #22c55e; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; margin-top: 8px;">
+                              🗺️ Voir sur Google Maps
+                            </a>
+                            <a href="https://www.openstreetmap.org/?mlat={{user_lat}}&mlon={{user_lng}}&zoom=15" target="_blank" style="display: inline-block; padding: 8px 16px; background: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; margin-top: 8px; margin-left: 8px;">
+                              🗺️ Voir sur OpenStreetMap
+                            </a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              {{/user_lng}}{{/user_lat}}
+
+              <!-- SECTION 4: Sélection de carte (si disponible) -->
+              {{#map_lat}}{{#map_lng}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">🗺️ Sélection sur la carte</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      {{#map_address}}
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Adresse sélectionnée</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 16px; font-weight: 600;">
+                            {{map_address}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/map_address}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🌐 Coordonnées sélectionnées</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            Latitude: <strong>{{map_lat}}</strong><br>
+                            Longitude: <strong>{{map_lng}}</strong>
+                          </p>
+                        </td>
+                      </tr>
+                      {{#map_radius_km}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📏 Rayon de recherche</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{map_radius_km}} km
+                          </p>
+                        </td>
+                      </tr>
+                      {{/map_radius_km}}
+                      {{#map_zoom_level}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🔍 Niveau de zoom</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{map_zoom_level}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/map_zoom_level}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <p style="margin: 8px 0 0 0;">
+                            <a href="https://www.google.com/maps?q={{map_lat}},{{map_lng}}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #f59e0b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">
+                              🗺️ Voir sur Google Maps
+                            </a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              {{/map_lng}}{{/map_lat}}
+
+              <!-- SECTION 5: Géolocalisation actuelle (si disponible) -->
+              {{#geolocation_lat}}{{#geolocation_lng}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #fce7f3; border-left: 4px solid #ec4899; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">📡 Géolocalisation actuelle (navigateur/appareil)</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      {{#geolocation_city}}
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🏙️ Ville détectée</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 16px; font-weight: 600;">
+                            {{geolocation_city}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/geolocation_city}}
+                      {{#geolocation_locality}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Localité</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{geolocation_locality}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/geolocation_locality}}
+                      {{#geolocation_country}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🌍 Pays</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{geolocation_country}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/geolocation_country}}
+                      {{#geolocation_address}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Adresse complète</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            {{geolocation_address}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/geolocation_address}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🌐 Coordonnées GPS</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px;">
+                            Latitude: <strong>{{geolocation_lat}}</strong><br>
+                            Longitude: <strong>{{geolocation_lng}}</strong>
+                          </p>
+                          <p style="margin: 8px 0 0 0;">
+                            <a href="https://www.google.com/maps?q={{geolocation_lat}},{{geolocation_lng}}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #ec4899; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; margin-top: 8px;">
+                              🗺️ Voir sur Google Maps
+                            </a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              {{/geolocation_lng}}{{/geolocation_lat}}
+
+              <!-- SECTION 6: Informations techniques (si disponibles) -->
+              {{#user_agent}}{{#ip_address}}
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; border-left: 4px solid #6b7280; border-radius: 6px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">🔧 Informations techniques</h2>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      {{#ip_address}}
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🌐 Adresse IP</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 14px; font-family: monospace;">
+                            {{ip_address}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/ip_address}}
+                      {{#user_agent}}
+                      <tr>
+                        <td style="padding: 12px 0; border-top: 1px solid #e5e7eb;">
+                          <strong style="color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">💻 User Agent</strong>
+                          <p style="margin: 4px 0 0 0; color: #111827; font-size: 12px; font-family: monospace; word-break: break-all;">
+                            {{user_agent}}
+                          </p>
+                        </td>
+                      </tr>
+                      {{/user_agent}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              {{/ip_address}}{{/user_agent}}
+
+              <!-- Action Buttons -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 20px 0 10px;">
+                    <a href="tel:{{phone}}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; margin-bottom: 10px;">
+                      📞 Appeler {{phone}}
+                    </a>
+                  </td>
+                </tr>
+                {{#user_email}}
+                <tr>
+                  <td align="center" style="padding: 0 0 10px;">
+                    <a href="mailto:{{user_email}}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                      📧 Répondre par email
+                    </a>
+                  </td>
+                </tr>
+                {{/user_email}}
+              </table>
+
+              <p style="margin: 25px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                Tu peux répondre directement à cette demande en appelant le numéro ci-dessus{{#user_email}} ou en répondant par email{{/user_email}}.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 30px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                ManyLovr - Système de contact automatique<br>
+                {{#timestamp}}ID de requête: {{timestamp}}{{/timestamp}}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
