@@ -19,17 +19,40 @@ export default function SignUpPage() {
     setInfoMsg('');
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      // Vérifier que le client Supabase est bien configuré
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante. Vérifiez que le fichier .env.local existe avec NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      }
 
-    setLoading(false);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (error) {
-      setErrorMsg(error.message);
+      if (error) {
+        console.error('Erreur Supabase signup:', error);
+        setErrorMsg(error.message || 'Erreur lors de la création du compte. Vérifiez votre connexion internet.');
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        setErrorMsg('Aucune donnée retournée. Vérifiez votre connexion internet.');
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error('Erreur lors de la création du compte:', err);
+      setErrorMsg(err.message || 'Erreur de connexion. Vérifiez votre connexion internet et réessayez.');
+      setLoading(false);
       return;
     }
+
+    setLoading(false);
 
     // Selon la config Supabase, un email de confirmation peut être envoyé.
     setInfoMsg(

@@ -76,3 +76,4 @@ Pour vérifier que tout fonctionne :
 - La clé `SUPABASE_SERVICE_ROLE_KEY` ne doit jamais être exposée côté client
 - Utilisez uniquement `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans le code client
 
+
