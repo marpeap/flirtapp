@@ -6,8 +6,99 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 import RadiusMapSelector from './_components/RadiusMapSelector';
+import ProfileAvatar from '../_components/ProfileAvatar';
 
 const MAX_GROUP_SIZE = 7; // toi + 6 autres
+
+// Composant Photo de profil pour le mode Tornado (grande taille)
+function ProfilePhotoCard({ photoUrl, displayName }) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  
+  const handleImageError = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profiles/page.js:ProfilePhotoCard',message:'Tornado profile image failed to load',data:{photoUrl:photoUrl?.substring(0,50)||null,displayName:displayName?.substring(0,20)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'profiles',hypothesisId:'IMG2'})}).catch(()=>{});
+    // #endregion
+    setImageError(true);
+    setImageLoading(false);
+  };
+  
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  const hasValidPhoto = photoUrl && !imageError;
+
+  return (
+    <>
+      {hasValidPhoto && imageLoading && (
+        <div
+          style={{
+            width: '100%',
+            minHeight: 300,
+            maxHeight: '60vh',
+            borderRadius: 18,
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(244, 114, 182, 0.2))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'absolute',
+            zIndex: 1,
+          }}
+        >
+          <div style={{
+            width: 40,
+            height: 40,
+            border: '3px solid rgba(168, 85, 247, 0.5)',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+        </div>
+      )}
+      {hasValidPhoto ? (
+        <img
+          src={photoUrl}
+          alt={displayName || 'Photo de profil'}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          style={{
+            width: '100%',
+            maxHeight: '60vh',
+            minHeight: 300,
+            objectFit: 'cover',
+            borderRadius: 18,
+            display: 'block',
+            opacity: imageLoading ? 0 : 1,
+            transition: 'opacity 0.3s ease',
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.1))',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: '100%',
+            minHeight: 300,
+            maxHeight: '60vh',
+            borderRadius: 18,
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(244, 114, 182, 0.4))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 80,
+            fontWeight: 600,
+            color: '#fff',
+            textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          {(displayName || '?')
+            .charAt(0)
+            .toUpperCase()}
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function ProfilesListPage() {
   const router = useRouter();
@@ -233,6 +324,10 @@ export default function ProfilesListPage() {
 
         return byIntent && byGenderFilter && byMyPreference && byVibes && byActive;
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profiles/page.js:237',message:'Profiles loaded and filtered',data:{totalProfiles:list?.length,firstProfileMainPhotoUrl:list?.[0]?.main_photo_url?.substring(0,100)||null,firstProfileHasPhoto:!!list?.[0]?.main_photo_url,samplePhotoUrls:list?.slice(0,3).map(p=>({id:p.id,photoUrl:p.main_photo_url?.substring(0,100)||null,hasPhoto:!!p.main_photo_url}))},timestamp:Date.now(),sessionId:'debug-session',runId:'profiles-load',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
 
       setProfiles(list);
       setLoading(false);
@@ -489,8 +584,10 @@ export default function ProfilesListPage() {
   function openPush() {
     setPushError('');
     setPushInfo('');
-    setPushVoiceFile(null);
+    setPushAudioBlob(null);
+    setPushAudioUrl(null);
     setPushVoiceDuration(null);
+    setPushRecording(false);
     setPushOpen(true);
   }
 
@@ -523,9 +620,34 @@ export default function ProfilesListPage() {
         body: JSON.stringify({ packId: selectedPack }),
       });
 
+      // #region agent log
+      const contentType = response.headers.get('content-type');
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profiles/page.js:526',message:'Push eclair API response',data:{status:response.status,statusText:response.statusText,contentType,isJson:contentType?.includes('application/json')},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API2'})}).catch(()=>{});
+      // #endregion
+
+      if (!response.ok) {
+        // #region agent log
+        const errorText = await response.text();
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profiles/page.js:526',message:'Push eclair API error',data:{status:response.status,statusText:response.statusText,errorText:errorText?.substring(0,200),isHtml:errorText?.startsWith('<!DOCTYPE')},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API2'})}).catch(()=>{});
+        // #endregion
+        const errorMsg = `Erreur ${response.status}: ${response.statusText}`;
+        console.error('Erreur achat crédits:', errorMsg);
+        setPushError(errorMsg);
+        return;
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        // #region agent log
+        const text = await response.text();
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profiles/page.js:526',message:'Push eclair non-JSON response',data:{contentType,responseStart:text?.substring(0,200),isHtml:text?.startsWith('<!DOCTYPE')},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API2'})}).catch(()=>{});
+        // #endregion
+        setPushError('La réponse du serveur n\'est pas au format JSON');
+        return;
+      }
+
       const data = await response.json();
       
-      if (!response.ok || data.error) {
+      if (data.error) {
         const errorMsg = data.error || `Erreur ${response.status}: ${response.statusText}`;
         console.error('Erreur achat crédits:', errorMsg, data);
         setPushError(errorMsg);
@@ -1357,16 +1479,20 @@ export default function ProfilesListPage() {
             <li 
               key={p.id} 
               style={{
-                padding: '16px',
-                borderRadius: '16px',
+                padding: '18px',
+                borderRadius: '20px',
                 background: isSelected 
-                  ? 'rgba(16, 185, 129, 0.08)'
-                  : 'rgba(168, 85, 247, 0.05)',
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08))'
+                  : 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(244, 114, 182, 0.05))',
                 border: isSelected 
-                  ? '1px solid rgba(16, 185, 129, 0.3)'
-                  : '1px solid rgba(168, 85, 247, 0.15)',
-                backdropFilter: 'blur(8px)',
-                transition: 'all 0.25s ease',
+                  ? '2px solid rgba(16, 185, 129, 0.4)'
+                  : '1px solid rgba(168, 85, 247, 0.2)',
+                backdropFilter: 'blur(12px)',
+                transition: 'all 0.3s ease',
+                boxShadow: isSelected 
+                  ? '0 8px 24px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                transform: isSelected ? 'scale(1.02)' : 'scale(1)',
               }}
             >
               <div
@@ -1388,59 +1514,13 @@ export default function ProfilesListPage() {
                   }}
                 >
                   {/* Avatar avec pastille de statut en ligne */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    {p.main_photo_url ? (
-                      <img
-                        src={p.main_photo_url}
-                        alt={p.display_name || 'Photo de profil'}
-                        style={{
-                          width: 60,
-                          height: 60,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2px solid rgba(168, 85, 247, 0.3)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 60,
-                          height: 60,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 22,
-                          fontWeight: 600,
-                          border: '2px solid rgba(168, 85, 247, 0.3)',
-                        }}
-                      >
-                        {(p.display_name || '?')
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-                    )}
-                    
-                    {/* Pastille verte - En ligne */}
-                    {(p.is_online || (p.last_seen_at && new Date(p.last_seen_at) > new Date(Date.now() - 5 * 60 * 1000))) && (
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: 2,
-                          right: 2,
-                          width: 14,
-                          height: 14,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #10b981, #059669)',
-                          border: '2px solid var(--color-bg-primary)',
-                          boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
-                        }}
-                        title="En ligne"
-                      />
-                    )}
-                  </div>
+                  <ProfileAvatar 
+                    photoUrl={p.main_photo_url}
+                    displayName={p.display_name}
+                    size={70}
+                    showOnlineStatus={true}
+                    isOnline={p.is_online || (p.last_seen_at && new Date(p.last_seen_at) > new Date(Date.now() - 5 * 60 * 1000))}
+                  />
 
                   <div
                     style={{
@@ -1450,11 +1530,16 @@ export default function ProfilesListPage() {
                       gap: 10,
                     }}
                   >
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <strong style={{ 
-                        fontSize: 15, 
+                        fontSize: 16, 
+                        fontWeight: 600,
                         display: 'block',
-                        marginBottom: 4,
+                        marginBottom: 6,
+                        color: '#e5e7eb',
+                        background: 'linear-gradient(135deg, #f472b6, #a855f7)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
                       }}>
                         {p.display_name || 'Sans pseudo'}
                       </strong>
@@ -1463,46 +1548,75 @@ export default function ProfilesListPage() {
                         color: '#9ca3af',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 6,
+                        marginBottom: 4,
                       }}>
-                        <span>📍</span>
-                        {p.city || 'Ville ?'}
+                        <span style={{ fontSize: 14 }}>📍</span>
+                        <span>{p.city || 'Ville ?'}</span>
                       </div>
+                      {p.bio && (
+                        <p style={{
+                          fontSize: 12,
+                          color: '#6b7280',
+                          margin: '6px 0 0 0',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.4,
+                        }}>
+                          {p.bio}
+                        </p>
+                      )}
                     </div>
                     <div style={{ 
                       textAlign: 'right', 
                       fontSize: 12,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 4,
+                      gap: 6,
+                      alignItems: 'flex-end',
                     }}>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: '8px',
-                        background: 'rgba(168, 85, 247, 0.1)',
-                        color: '#c084fc',
-                      }}>
-                        {p.gender || '-'}
-                      </span>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: '8px',
-                        background: p.main_intent === 'friendly' 
-                          ? 'rgba(16, 185, 129, 0.1)'
-                          : p.main_intent === 'sexy'
-                          ? 'rgba(244, 114, 182, 0.1)'
-                          : 'rgba(245, 158, 11, 0.1)',
-                        color: p.main_intent === 'friendly' 
-                          ? '#10b981'
-                          : p.main_intent === 'sexy'
-                          ? '#f472b6'
-                          : '#f59e0b',
-                      }}>
-                        {p.main_intent === 'friendly' && '🤝 Amical'}
-                        {p.main_intent === 'sexy' && '🔥 Coquin'}
-                        {p.main_intent === 'wild' && '⚡ Sauvage'}
-                        {!p.main_intent && '-'}
-                      </span>
+                      {p.gender && (
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(244, 114, 182, 0.1))',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          color: '#c084fc',
+                          fontWeight: 500,
+                          fontSize: 11,
+                        }}>
+                          {p.gender}
+                        </span>
+                      )}
+                      {p.main_intent && (
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '10px',
+                          background: p.main_intent === 'friendly' 
+                            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1))'
+                            : p.main_intent === 'sexy'
+                            ? 'linear-gradient(135deg, rgba(244, 114, 182, 0.15), rgba(236, 72, 153, 0.1))'
+                            : 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))',
+                          border: `1px solid ${p.main_intent === 'friendly' 
+                            ? 'rgba(16, 185, 129, 0.3)'
+                            : p.main_intent === 'sexy'
+                            ? 'rgba(244, 114, 182, 0.3)'
+                            : 'rgba(245, 158, 11, 0.3)'}`,
+                          color: p.main_intent === 'friendly' 
+                            ? '#10b981'
+                            : p.main_intent === 'sexy'
+                            ? '#f472b6'
+                            : '#f59e0b',
+                          fontWeight: 500,
+                          fontSize: 11,
+                        }}>
+                          {p.main_intent === 'friendly' && '🤝 Amical'}
+                          {p.main_intent === 'sexy' && '🔥 Coquin'}
+                          {p.main_intent === 'wild' && '⚡ Intense'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -1769,39 +1883,10 @@ export default function ProfilesListPage() {
                             marginBottom: 16,
                           }}
                         >
-                          {p.main_photo_url ? (
-                            <img
-                              src={p.main_photo_url}
-                              alt={p.display_name || 'Photo de profil'}
-                              style={{
-                                width: '100%',
-                                maxHeight: '60vh',
-                                minHeight: 300,
-                                objectFit: 'cover',
-                                borderRadius: 18,
-                                display: 'block',
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: '100%',
-                                minHeight: 300,
-                                maxHeight: '60vh',
-                                borderRadius: 18,
-                                background:
-                                  'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(244, 114, 182, 0.3))',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 64,
-                              }}
-                            >
-                              {(p.display_name || '?')
-                                .charAt(0)
-                                .toUpperCase()}
-                            </div>
-                          )}
+                          <ProfilePhotoCard 
+                            photoUrl={p.main_photo_url}
+                            displayName={p.display_name}
+                          />
                         </div>
 
                         <h3 style={{ 
@@ -2195,10 +2280,11 @@ export default function ProfilesListPage() {
                 onChange={(e) => {
                   setPushError('');
                   const file = e.target.files?.[0] || null;
-                  setPushVoiceFile(file);
+                  setPushAudioBlob(file);
                   setPushVoiceDuration(null);
                   if (file) {
                     const url = URL.createObjectURL(file);
+                    setPushAudioUrl(url);
                     const audio = new Audio(url);
                     audio.onloadedmetadata = () => {
                       const dur = audio.duration || 0;
@@ -2206,13 +2292,15 @@ export default function ProfilesListPage() {
                       URL.revokeObjectURL(url);
                       if (dur > 20) {
                         setPushError('Le vocal doit durer 20 secondes maximum.');
-                        setPushVoiceFile(null);
+                        setPushAudioBlob(null);
+                        setPushAudioUrl(null);
                       }
                     };
                     audio.onerror = () => {
                       URL.revokeObjectURL(url);
                       setPushError('Impossible de lire ce fichier audio.');
-                      setPushVoiceFile(null);
+                      setPushAudioBlob(null);
+                      setPushAudioUrl(null);
                     };
                   }
                 }}

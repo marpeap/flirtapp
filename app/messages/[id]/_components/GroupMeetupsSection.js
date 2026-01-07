@@ -24,6 +24,10 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
 
   async function loadMeetups() {
     if (!conversationId) return;
+    // #region agent log
+    const loadStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:25',message:'Loading group meetups',data:{conversationId,isGroup},timestamp:loadStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G4'})}).catch(()=>{});
+    // #endregion
     setLoading(true);
     setErrorMsg('');
 
@@ -48,6 +52,14 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
       .in('status', ['pending', 'confirmed'])
       .order('created_at', { ascending: false });
 
+    // #region agent log
+    const loadEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:51',message:'Error loading group meetups',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,conversationId,isTableMissing:error.code==='PGRST116'||error.message?.includes('does not exist'),duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G4'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:51',message:'Group meetups loaded successfully',data:{meetupCount:data?.length||0,conversationId,duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G4'})}).catch(()=>{});
+    }
+    // #endregion
     if (error) {
       // Si les tables n'existent pas encore, afficher un message clair
       if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
@@ -79,12 +91,15 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
       return;
     }
 
+    // #region agent log
+    const proposeStartTime = Date.now();
+    const dateTime = new Date(`${proposedDate}T${proposedTime}`);
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:75',message:'Proposing group meetup',data:{conversationId,userId:userId?.substring(0,8)||null,proposedDate:dateTime.toISOString(),hasLocation:!!proposedLocation},timestamp:proposeStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G5'})}).catch(()=>{});
+    // #endregion
     setProposing(true);
     setErrorMsg('');
 
     // Combiner date et heure
-    const dateTime = new Date(`${proposedDate}T${proposedTime}`);
-
     const { data, error } = await supabase.rpc('propose_group_meetup', {
       p_conversation_id: conversationId,
       p_proposer_user_id: userId,
@@ -93,6 +108,14 @@ export default function GroupMeetupsSection({ conversationId, userId, isGroup })
       p_proposed_location_details: proposedLocationDetails.trim() || null,
     });
 
+    // #region agent log
+    const proposeEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:98',message:'Error proposing group meetup',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,conversationId,duration:proposeEndTime-proposeStartTime},timestamp:proposeEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G5'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:98',message:'Group meetup proposed successfully',data:{meetupId:data||null,conversationId,duration:proposeEndTime-proposeStartTime},timestamp:proposeEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G5'})}).catch(()=>{});
+    }
+    // #endregion
     setProposing(false);
 
     if (error) {
@@ -279,12 +302,15 @@ function MeetupCard({ meetup, userId, conversationId, onUpdate }) {
 
   async function handleRespond(responseType) {
     if (!userId) return;
-    setResponding(true);
-
+    // #region agent log
+    const respondStartTime = Date.now();
     let counterDateValue = null;
     if (responseType === 'counter_proposal' && counterDate && counterTime) {
       counterDateValue = new Date(`${counterDate}T${counterTime}`).toISOString();
     }
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:280',message:'Responding to group meetup',data:{meetupId:meetup.id,userId:userId?.substring(0,8)||null,responseType,hasCounterProposal:responseType==='counter_proposal'},timestamp:respondStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G6'})}).catch(()=>{});
+    // #endregion
+    setResponding(true);
 
     const { error } = await supabase.rpc('respond_to_meetup', {
       p_meetup_id: meetup.id,
@@ -296,6 +322,14 @@ function MeetupCard({ meetup, userId, conversationId, onUpdate }) {
       p_message: counterMessage.trim() || null,
     });
 
+    // #region agent log
+    const respondEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:299',message:'Error responding to meetup',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,meetupId:meetup.id,responseType,duration:respondEndTime-respondStartTime},timestamp:respondEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G6'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:299',message:'Meetup response sent successfully',data:{meetupId:meetup.id,responseType,duration:respondEndTime-respondStartTime},timestamp:respondEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G6'})}).catch(()=>{});
+    }
+    // #endregion
     setResponding(false);
 
     if (error) {
@@ -315,10 +349,24 @@ function MeetupCard({ meetup, userId, conversationId, onUpdate }) {
   async function handleAcceptCounter(counterUserId) {
     if (!userId || meetup.proposer_user_id !== userId) return;
 
+    // #region agent log
+    const acceptStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:315',message:'Accepting counter proposal',data:{meetupId:meetup.id,counterUserId:counterUserId?.substring(0,8)||null,userId:userId?.substring(0,8)||null},timestamp:acceptStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G7'})}).catch(()=>{});
+    // #endregion
+
     const { error } = await supabase.rpc('accept_counter_proposal', {
       p_meetup_id: meetup.id,
       p_counter_user_id: counterUserId,
     });
+
+    // #region agent log
+    const acceptEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:323',message:'Error accepting counter proposal',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,meetupId:meetup.id,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G7'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupMeetupsSection.js:323',message:'Counter proposal accepted successfully',data:{meetupId:meetup.id,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G7'})}).catch(()=>{});
+    }
+    // #endregion
 
     if (error) {
       alert('Erreur : ' + error.message);

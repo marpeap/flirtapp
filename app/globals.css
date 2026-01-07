@@ -120,8 +120,8 @@ main {
 /* Ajustement pour la sidebar sur desktop */
 @media (min-width: 1024px) {
   main {
-    margin-left: 260px;
-    padding-left: var(--spacing-xl);
+    margin-left: 220px;
+    padding-left: var(--spacing-lg);
   }
 }
 
@@ -450,6 +450,15 @@ label {
 }
 
 /* Animations douces */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

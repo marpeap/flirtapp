@@ -37,8 +37,8 @@ export default function ProfileForm({
         gap: 10,
       }}
     >
-      <label style={{ fontSize: 13 }}>
-        Photos de profil (jusqu'à 5)
+      <div style={{ fontSize: 13, marginBottom: 4 }}>
+        <div style={{ marginBottom: 4 }}>Photos de profil (jusqu'à 5)</div>
         <MultiPhotoUploader
           userId={userId}
           profileId={profileId}
@@ -50,11 +50,11 @@ export default function ProfileForm({
             }
           }}
         />
-      </label>
-      <label style={{ fontSize: 13 }}>
-
+      </div>
+      <label htmlFor="display-name" style={{ fontSize: 13 }}>
         Pseudo
         <input
+          id="display-name"
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -63,8 +63,8 @@ export default function ProfileForm({
         />
       </label>
 
-      <label style={{ fontSize: 13 }}>
-        Ville / zone
+      <div style={{ fontSize: 13 }}>
+        <div style={{ marginBottom: 4 }}>Ville / zone</div>
         <CityGeolocation 
           city={city} 
           setCity={setCity}
@@ -76,11 +76,12 @@ export default function ProfileForm({
             // La position est déjà mise à jour via setLat/setLng
           }}
         />
-      </label>
+      </div>
 
-      <label style={{ fontSize: 13 }}>
+      <label htmlFor="gender" style={{ fontSize: 13 }}>
         Genre
         <select
+          id="gender"
           value={gender}
           onChange={(e) => setGender(e.target.value)}
           style={{ marginTop: 4, width: '100%' }}
@@ -97,9 +98,10 @@ export default function ProfileForm({
         </select>
       </label>
 
-      <label style={{ fontSize: 13 }}>
+      <label htmlFor="looking-for-gender" style={{ fontSize: 13 }}>
         Tu es ouvert·e à discuter en ligne…
         <select
+          id="looking-for-gender"
           value={lookingForGender}
           onChange={(e) => setLookingForGender(e.target.value)}
           style={{ marginTop: 4, width: '100%' }}
@@ -114,9 +116,10 @@ export default function ProfileForm({
         </select>
       </label>
 
-      <label style={{ fontSize: 13 }}>
+      <label htmlFor="main-intent" style={{ fontSize: 13 }}>
         Intention principale
         <select
+          id="main-intent"
           value={mainIntent}
           onChange={(e) => setMainIntent(e.target.value)}
           style={{ marginTop: 4, width: '100%' }}
@@ -128,9 +131,10 @@ export default function ProfileForm({
         </select>
       </label>
 
-      <label style={{ fontSize: 13 }}>
+      <label htmlFor="bio" style={{ fontSize: 13 }}>
         Bio
         <textarea
+          id="bio"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           rows={4}

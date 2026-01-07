@@ -11,6 +11,10 @@ export default function ProfilePhotoUploader({ userId, mainPhotoUrl, onPhotoChan
     const file = e.target.files?.[0];
     if (!file || !userId) return;
 
+    // #region agent log
+    const uploadStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProfilePhotoUploader.js:10',message:'Starting profile photo upload',data:{userId:userId?.substring(0,8)||null,fileName:file.name,fileSize:file.size,fileType:file.type},timestamp:uploadStartTime,sessionId:'debug-session',runId:'storage',hypothesisId:'S1'})}).catch(()=>{});
+    // #endregion
     setUploading(true);
     setErrorMsg('');
 
@@ -18,12 +22,25 @@ export default function ProfilePhotoUploader({ userId, mainPhotoUrl, onPhotoChan
       const ext = file.name.split('.').pop();
       const path = `${userId}/${Date.now()}.${ext}`;
 
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProfilePhotoUploader.js:21',message:'Uploading to storage bucket',data:{bucket:'profile-photos',path,userId:userId?.substring(0,8)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'storage',hypothesisId:'S1'})}).catch(()=>{});
+      // #endregion
+
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
         .upload(path, file, {
           cacheControl: '3600',
           upsert: true,
         });
+
+      // #region agent log
+      const uploadEndTime = Date.now();
+      if (uploadError) {
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProfilePhotoUploader.js:28',message:'Storage upload error',data:{errorCode:uploadError.statusCode,errorMessage:uploadError.message,errorName:uploadError.name,bucket:'profile-photos',path,userId:userId?.substring(0,8)||null,duration:uploadEndTime-uploadStartTime},timestamp:uploadEndTime,sessionId:'debug-session',runId:'storage',hypothesisId:'S1'})}).catch(()=>{});
+      } else {
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProfilePhotoUploader.js:28',message:'Storage upload successful',data:{bucket:'profile-photos',path,duration:uploadEndTime-uploadStartTime},timestamp:uploadEndTime,sessionId:'debug-session',runId:'storage',hypothesisId:'S1'})}).catch(()=>{});
+      }
+      // #endregion
 
       if (uploadError) {
         setErrorMsg(uploadError.message);

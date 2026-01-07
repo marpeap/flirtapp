@@ -91,8 +91,18 @@ export default function VoiceRecorder({ conversationId, userId, onMessageSent, o
     setError('');
 
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.js:87',message:'sendVoiceMessage entry',data:{conversationId,userId,audioBlobSize:audioBlob?.size},timestamp:Date.now(),sessionId:'debug-session',runId:'voice-upload',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+
       // 1) Upload vers Supabase Storage
-      const fileName = `voice_${userId}_${Date.now()}.webm`;
+      // Le chemin doit correspondre à la politique RLS : pushes/{userId}/...
+      const fileName = `pushes/${userId}/voice_${Date.now()}.webm`;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.js:95',message:'Before storage upload',data:{fileName,bucket:'voice-messages'},timestamp:Date.now(),sessionId:'debug-session',runId:'voice-upload',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice-messages')
         .upload(fileName, audioBlob, {
@@ -100,7 +110,19 @@ export default function VoiceRecorder({ conversationId, userId, onMessageSent, o
           upsert: false,
         });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.js:103',message:'Storage upload result',data:{hasError:!!uploadError,errorMessage:uploadError?.message,errorStatusCode:uploadError?.statusCode,hasData:!!uploadData,dataPath:uploadData?.path},timestamp:Date.now(),sessionId:'debug-session',runId:'voice-upload',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+
       if (uploadError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VoiceRecorder.js:108',message:'Storage upload error details',data:{errorMessage:uploadError.message,errorStatusCode:uploadError.statusCode,errorStatusText:uploadError.statusText,errorContext:uploadError.context},timestamp:Date.now(),sessionId:'debug-session',runId:'voice-upload',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
+        
+        // Message d'erreur plus clair pour "Bucket not found"
+        if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('not found')) {
+          throw new Error('Le bucket "voice-messages" n\'existe pas. Veuillez le créer dans Supabase Storage (voir mobile/create_storage_buckets.md)');
+        }
         throw new Error(uploadError.message);
       }
 

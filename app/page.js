@@ -135,7 +135,7 @@ export default function HomePage() {
                 margin: '0 auto clamp(32px, 5vw, 48px)',
               }}
             >
-              ManyLovr t'aide à créer des connexions authentiques, en solo / duo ou à
+              ManyLovr t'aide à créer des connexions authentiques, en duo ou à
               plusieurs, sans spam ni swipe infini. Tu poses ton cadre, tes envies,
               tes groupes ; on t'aide à matcher et flirter en ligne avec les bonnes personnes.
             </p>

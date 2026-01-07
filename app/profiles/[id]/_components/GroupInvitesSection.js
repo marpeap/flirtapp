@@ -153,6 +153,10 @@ export default function GroupInvitesSection({ userId }) {
 
   async function handleAccept(candidate) {
     if (!userId) return;
+    // #region agent log
+    const acceptStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupInvitesSection.js:154',message:'Accepting group invite from profile page',data:{candidateId:candidate.id,proposalId:candidate.proposal?.id,userId:userId?.substring(0,8)||null},timestamp:acceptStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G8'})}).catch(()=>{});
+    // #endregion
     setActingId(candidate.id);
     setErrorMsg('');
 
@@ -161,6 +165,14 @@ export default function GroupInvitesSection({ userId }) {
       p_user_id: userId,
     });
 
+    // #region agent log
+    const acceptEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupInvitesSection.js:164',message:'Error accepting group invite from profile',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,proposalId:candidate.proposal?.id,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G8'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GroupInvitesSection.js:164',message:'Group invite accepted from profile successfully',data:{proposalId:candidate.proposal?.id,conversationId:data||null,hasConversation:!!data,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G8'})}).catch(()=>{});
+    }
+    // #endregion
     setActingId(null);
 
     if (error) {
@@ -168,10 +180,19 @@ export default function GroupInvitesSection({ userId }) {
       return;
     }
 
+    // Rafraîchir les données après acceptation
     await loadData();
 
+    // Afficher un message de succès
+    setErrorMsg(''); // Effacer les erreurs précédentes
+    // Note: setInfoMsg n'existe pas dans ce composant, on pourrait l'ajouter si nécessaire
+
+    // Rediriger vers la conversation si elle existe
     if (data) {
-      router.push(`/messages/${data}`);
+      // Attendre un peu pour que l'UI se mette à jour avant la redirection
+      setTimeout(() => {
+        router.push(`/messages/${data}`);
+      }, 500);
     }
   }
 

@@ -19,35 +19,84 @@ export default function SignUpPage() {
     setInfoMsg('');
     setLoading(true);
 
+    // #region agent log
+    const signupStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:16',message:'Signup form submitted',data:{email:email?.substring(0,20)||null,hasPassword:!!password,supabaseInitialized:!!supabase},timestamp:signupStartTime,sessionId:'debug-session',runId:'signup',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
     try {
-      // Vérifier que le client Supabase est bien configuré
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      console.log('🔵 Tentative de création de compte pour:', email);
+      console.log('🔵 Client Supabase:', supabase ? '✓ Initialisé' : '✗ Non initialisé');
       
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante. Vérifiez que le fichier .env.local existe avec NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      // Vérifier que le client Supabase est bien initialisé
+      if (!supabase) {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:27',message:'Supabase client not initialized error',data:{email:email?.substring(0,20)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'signup',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        throw new Error('Client Supabase non initialisé. Vérifiez la configuration.');
       }
+
+      // #region agent log
+      const apiCallStartTime = Date.now();
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:31',message:'Calling supabase.auth.signUp',data:{email:email?.substring(0,20)||null,hasPassword:!!password},timestamp:apiCallStartTime,sessionId:'debug-session',runId:'signup',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
 
+      // #region agent log
+      const apiCallEndTime = Date.now();
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:36',message:'Supabase signUp response received',data:{hasData:!!data,hasError:!!error,errorMessage:error?.message||null,errorName:error?.name||null,errorStatus:error?.status||null,userId:data?.user?.id||null,duration:apiCallEndTime-apiCallStartTime},timestamp:apiCallEndTime,sessionId:'debug-session',runId:'signup',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
+      console.log('🔵 Réponse Supabase:', { data: data ? '✓ Données reçues' : '✗ Aucune donnée', error: error ? error.message : 'Aucune erreur' });
+
       if (error) {
-        console.error('Erreur Supabase signup:', error);
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:38',message:'Supabase signUp returned error',data:{errorMessage:error.message,errorStatus:error.status,errorName:error.name,email:email?.substring(0,20)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'signup',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        console.error('❌ Erreur Supabase signup:', error);
+        console.error('❌ Détails:', {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
         setErrorMsg(error.message || 'Erreur lors de la création du compte. Vérifiez votre connexion internet.');
         setLoading(false);
         return;
       }
 
       if (!data) {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:50',message:'No data returned from Supabase',data:{email:email?.substring(0,20)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'signup',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        console.error('❌ Aucune donnée retournée par Supabase');
         setErrorMsg('Aucune donnée retournée. Vérifiez votre connexion internet.');
         setLoading(false);
         return;
       }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:57',message:'Signup successful',data:{userId:data.user?.id||null,email:email?.substring(0,20)||null,totalDuration:Date.now()-signupStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'signup',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      console.log('✅ Compte créé avec succès:', data.user?.id);
     } catch (err) {
-      console.error('Erreur lors de la création du compte:', err);
-      setErrorMsg(err.message || 'Erreur de connexion. Vérifiez votre connexion internet et réessayez.');
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'signup/page.js:58',message:'Exception caught during signup',data:{errorType:err?.constructor?.name,errorMessage:err?.message,errorName:err?.name,hasStack:!!err?.stack,email:email?.substring(0,20)||null,isNetworkError:err?.message?.includes('Failed to fetch')||err?.name==='TypeError',totalDuration:Date.now()-signupStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'signup',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      console.error('❌ Erreur lors de la création du compte:', err);
+      console.error('❌ Type d\'erreur:', err?.constructor?.name);
+      console.error('❌ Message:', err?.message);
+      console.error('❌ Stack:', err?.stack);
+      
+      // Gérer spécifiquement les erreurs de réseau
+      if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
+        setErrorMsg('Erreur de connexion au serveur. Vérifiez que le serveur Next.js est démarré et que le fichier .env.local existe avec les bonnes valeurs. Redémarrez le serveur si nécessaire.');
+      } else {
+        setErrorMsg(err.message || 'Erreur de connexion. Vérifiez votre connexion internet et réessayez.');
+      }
       setLoading(false);
       return;
     }

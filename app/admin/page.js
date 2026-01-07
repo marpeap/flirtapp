@@ -37,7 +37,7 @@ export default function AdminPage() {
   const [bashMessage, setBashMessage] = useState('');
   const [bashForm, setBashForm] = useState({
     display_name: '',
-    gender: 'woman',
+    gender: 'femme',
     city: 'Paris',
     main_intent: 'casual',
     bio: '',
@@ -180,12 +180,26 @@ export default function AdminPage() {
       // Créer un UUID fictif pour le user_id (pas de compte auth réel)
       const fakeUserId = crypto.randomUUID();
       
+      // Fonction pour mapper les valeurs de genre vers les valeurs attendues par la base de données
+      function mapGenderToDatabase(genderValue) {
+        if (!genderValue) return null;
+        const genderMap = {
+          'man': 'homme', 'woman': 'femme', 'non_binary': 'non-binaire',
+          'trans_mtf': 'femme', 'trans_ftm': 'homme', 'couple': 'autre',
+          'fluid': 'non-binaire', 'other': 'autre',
+          'homme': 'homme', 'femme': 'femme', 'non-binaire': 'non-binaire', 'autre': 'autre',
+        };
+        return genderMap[genderValue] || 'autre';
+      }
+      
+      const mappedGender = mapGenderToDatabase(bashForm.gender);
+      
       const { data, error } = await supabase
         .from('profiles')
         .insert({
           user_id: fakeUserId,
           display_name: bashForm.display_name.trim(),
-          gender: bashForm.gender,
+          gender: mappedGender,
           city: bashForm.city,
           main_intent: bashForm.main_intent,
           bio: bashForm.bio,
@@ -206,7 +220,7 @@ export default function AdminPage() {
         setBashProfiles(prev => [data, ...prev]);
         setBashForm({
           display_name: '',
-          gender: 'woman',
+          gender: 'femme',
           city: 'Paris',
           main_intent: 'casual',
           bio: '',
@@ -729,10 +743,10 @@ export default function AdminPage() {
                     onChange={(e) => setBashForm(prev => ({ ...prev, gender: e.target.value }))}
                     style={{ width: '100%' }}
                   >
-                    <option value="woman">Femme</option>
-                    <option value="man">Homme</option>
-                    <option value="couple">Couple</option>
-                    <option value="other">Autre</option>
+                    <option value="femme">Femme</option>
+                    <option value="homme">Homme</option>
+                    <option value="non-binaire">Non-binaire</option>
+                    <option value="autre">Autre</option>
                   </select>
                 </div>
                 

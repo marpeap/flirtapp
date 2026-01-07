@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import ProfileAvatar from '../_components/ProfileAvatar';
 
 export default function ConversationsPage() {
   const router = useRouter();
@@ -131,6 +132,11 @@ export default function ConversationsPage() {
           const p = other ? profilesByUserId[other] : null;
           const name = p?.display_name || 'Profil supprimé';
           const city = p?.city || '';
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'messages/page.js:133',message:'Enriching conversation with profile',data:{conversationId:c.id,otherUserId:other,hasProfile:!!p,mainPhotoUrl:p?.main_photo_url?.substring(0,100)||null,mainPhotoUrlType:typeof p?.main_photo_url,mainPhotoUrlLength:p?.main_photo_url?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'messages-load',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          
           return {
             ...c,
             displayName: name,
@@ -256,53 +262,13 @@ export default function ConversationsPage() {
               >
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   {/* Avatar avec pastille de statut */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    {c.avatarUrl ? (
-                      <img
-                        src={c.avatarUrl}
-                        alt={c.displayName}
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          backgroundColor: '#111827',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 18,
-                        }}
-                      >
-                        {c.avatarLetter}
-                      </div>
-                    )}
-                    
-                    {/* Pastille verte - En ligne */}
-                    {isOnline && (
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: 2,
-                          right: 2,
-                          width: 14,
-                          height: 14,
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #10b981, #059669)',
-                          border: '2px solid var(--color-bg-primary)',
-                          boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
-                        }}
-                        title="En ligne"
-                      />
-                    )}
-                  </div>
+                  <ProfileAvatar
+                    photoUrl={c.avatarUrl}
+                    displayName={c.displayName}
+                    size={48}
+                    showOnlineStatus={true}
+                    isOnline={onlineUsers.has(c.user_id_1 === currentUserId ? c.user_id_2 : c.user_id_1)}
+                  />
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div

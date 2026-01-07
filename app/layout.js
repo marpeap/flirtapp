@@ -11,6 +11,8 @@ export const metadata = {
   description:
     "ManyLovr est une app de chat en ligne pensée pour les connexions à plusieurs, les groupes affinitaires et les échanges qualitatifs.",
   metadataBase: new URL('https://manylovr.com'),
+  // Note: CSP eval() warning en développement vient de Next.js hot reload
+  // Ce n'est pas un problème de sécurité en développement
 };
 
 // Viewport (export dédié Next.js)
@@ -22,8 +24,8 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fr">
-      <body>
+    <html lang="fr" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <Loading />
         <Sidebar />
         <main>{children}</main>

@@ -27,6 +27,27 @@ export default function GoodiesSelector({ conversationId, recipientUserId, onClo
         }),
       });
 
+      // #region agent log
+      const contentType = res.headers.get('content-type');
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoodiesSelector.js:20',message:'API response received',data:{status:res.status,statusText:res.statusText,contentType,isJson:contentType?.includes('application/json'),url:res.url},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API1'})}).catch(()=>{});
+      // #endregion
+
+      if (!res.ok) {
+        // #region agent log
+        const errorText = await res.text();
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoodiesSelector.js:30',message:'API error response',data:{status:res.status,statusText:res.statusText,errorText:errorText?.substring(0,200),isHtml:errorText?.startsWith('<!DOCTYPE')},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API1'})}).catch(()=>{});
+        // #endregion
+        throw new Error(`Erreur HTTP: ${res.status} ${res.statusText}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        // #region agent log
+        const text = await res.text();
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoodiesSelector.js:30',message:'Non-JSON response received',data:{contentType,responseStart:text?.substring(0,200),isHtml:text?.startsWith('<!DOCTYPE')},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API1'})}).catch(()=>{});
+        // #endregion
+        throw new Error('La réponse n\'est pas au format JSON');
+      }
+
       const data = await res.json();
 
       if (data.url) {
@@ -35,8 +56,11 @@ export default function GoodiesSelector({ conversationId, recipientUserId, onClo
         alert(data.error || 'Erreur lors de la création du paiement');
       }
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoodiesSelector.js:37',message:'Exception in handlePurchase',data:{errorMessage:err?.message,errorName:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'api',hypothesisId:'API1'})}).catch(()=>{});
+      // #endregion
       console.error(err);
-      alert('Erreur réseau');
+      alert('Erreur réseau: ' + (err.message || 'Erreur inconnue'));
     } finally {
       setLoading(false);
       setSelectedGoodie(null);

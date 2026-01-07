@@ -53,11 +53,26 @@ export default function Sidebar() {
 
   async function loadGroupInvitesCount(userId) {
     if (!userId) return;
-    const { data: myCandidatures } = await supabase
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:54',message:'loadGroupInvitesCount entry',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-groups',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    const { data: myCandidatures, error: candidatesError } = await supabase
       .from('group_match_candidates')
       .select('id, proposal_id')
       .eq('user_id', userId)
       .eq('status', 'invited');
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:59',message:'group_match_candidates query result',data:{hasError:!!candidatesError,errorMessage:candidatesError?.message,errorCode:candidatesError?.code,errorDetails:candidatesError?.details,errorHint:candidatesError?.hint,hasData:!!myCandidatures,dataLength:myCandidatures?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-groups',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
+    if (candidatesError) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:61',message:'group_match_candidates error',data:{errorMessage:candidatesError.message,errorCode:candidatesError.code,errorDetails:candidatesError.details,errorHint:candidatesError.hint},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-groups',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      setGroupInvitesCount(0);
+      return;
+    }
     if (!myCandidatures || myCandidatures.length === 0) { setGroupInvitesCount(0); return; }
     const proposalIds = myCandidatures.map(c => c.proposal_id);
     const { data: proposals } = await supabase
@@ -75,11 +90,26 @@ export default function Sidebar() {
   async function loadUnreadMessagesCount(userId) {
     if (!userId) return;
     try {
-      const { data: parts } = await supabase
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:75',message:'loadUnreadMessagesCount entry',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-unread',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      const { data: parts, error: partsError } = await supabase
         .from('conversation_participants')
         .select('conversation_id, last_read_at')
         .eq('user_id', userId)
         .eq('active', true);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:80',message:'conversation_participants query result',data:{hasError:!!partsError,errorMessage:partsError?.message,errorCode:partsError?.code,errorDetails:partsError?.details,hasData:!!parts,dataLength:parts?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-unread',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
+      if (partsError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:85',message:'conversation_participants error',data:{errorMessage:partsError.message,errorCode:partsError.code,errorDetails:partsError.details,errorHint:partsError.hint},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-unread',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+        setUnreadMessagesCount(0);
+        return;
+      }
       if (!parts || parts.length === 0) { setUnreadMessagesCount(0); return; }
       let totalUnread = 0;
       for (const part of parts) {
@@ -93,7 +123,12 @@ export default function Sidebar() {
         totalUnread += count || 0;
       }
       setUnreadMessagesCount(Math.min(totalUnread, 99));
-    } catch (err) { setUnreadMessagesCount(0); }
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.js:96',message:'loadUnreadMessagesCount catch',data:{errorMessage:err?.message,errorName:err?.name,errorStack:err?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'sidebar-unread',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      setUnreadMessagesCount(0);
+    }
   }
 
   useEffect(() => {
@@ -149,10 +184,10 @@ export default function Sidebar() {
           left: 0;
           top: 0;
           bottom: 0;
-          width: 280px;
+          width: 220px;
           background: rgba(15, 15, 35, 0.95);
           backdrop-filter: blur(20px);
-          border-right: 1px solid rgba(168, 85, 247, 0.2);
+          border-right: 1px solid rgba(168, 85, 247, 0.15);
           box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
           z-index: 999;
           transform: translateX(-100%);
@@ -165,32 +200,32 @@ export default function Sidebar() {
           transform: translateX(0);
         }
         .sidebar-header {
-          padding: 24px 20px;
+          padding: 16px 14px;
           border-bottom: 1px solid rgba(168, 85, 247, 0.1);
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
         }
         .sidebar-logo {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           text-decoration: none;
           color: #fff;
           font-weight: 700;
-          font-size: 18px;
+          font-size: 16px;
         }
         .sidebar-logo-icon {
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           border-radius: 50%;
           background: linear-gradient(135deg, #a855f7, #f472b6);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 16px;
-          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+          font-size: 14px;
+          box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
         }
         .sidebar-logo-text {
           background: linear-gradient(135deg, #c084fc, #f9a8d4);
@@ -199,9 +234,9 @@ export default function Sidebar() {
           background-clip: text;
         }
         .sidebar-close-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
           border: none;
           background: rgba(168, 85, 247, 0.1);
           color: #e2e8f0;
@@ -222,81 +257,87 @@ export default function Sidebar() {
         }
         .sidebar-nav {
           flex: 1;
-          padding: 16px 12px;
+          padding: 12px 10px;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
         }
         .sidebar-link {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          border-radius: 12px;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 8px;
           text-decoration: none;
           color: #e2e8f0;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 400;
           transition: all 0.2s ease;
           position: relative;
+          border: 1px solid rgba(168, 85, 247, 0.08);
+          background: rgba(168, 85, 247, 0.02);
         }
         .sidebar-link:hover {
-          background: rgba(168, 85, 247, 0.1);
+          background: rgba(168, 85, 247, 0.08);
           color: #c084fc;
-          transform: translateX(4px);
+          border-color: rgba(168, 85, 247, 0.2);
+          transform: translateX(2px);
         }
         .sidebar-link.active {
-          background: rgba(168, 85, 247, 0.15);
+          background: rgba(168, 85, 247, 0.12);
           color: #c084fc;
           font-weight: 500;
-          border-left: 3px solid #a855f7;
+          border-color: rgba(168, 85, 247, 0.3);
+          box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
         }
         .sidebar-link-icon {
-          font-size: 20px;
-          width: 24px;
+          font-size: 18px;
+          width: 20px;
           text-align: center;
+          flex-shrink: 0;
         }
         .sidebar-link-badge {
-          min-width: 20px;
-          height: 20px;
-          padding: 0 6px;
-          border-radius: 10px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: 9px;
           background: linear-gradient(135deg, #f472b6, #a855f7);
           color: #fff;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
           display: flex;
           align-items: center;
           justify-content: center;
           margin-left: auto;
+          flex-shrink: 0;
         }
         .sidebar-link-badge.success {
           background: linear-gradient(135deg, #10b981, #059669);
         }
         .sidebar-footer {
-          padding: 20px;
+          padding: 14px 12px;
           border-top: 1px solid rgba(168, 85, 247, 0.1);
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
         .sidebar-user-email {
-          font-size: 12px;
+          font-size: 11px;
           color: #9ca3af;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          padding: 0 4px;
+          padding: 0 2px;
         }
         .sidebar-logout-btn {
           width: 100%;
-          padding: 10px 16px;
-          border-radius: 10px;
+          padding: 8px 12px;
+          border-radius: 8px;
           border: none;
           background: linear-gradient(135deg, #ef4444, #dc2626);
           color: #fff;
           font-weight: 500;
-          font-size: 14px;
+          font-size: 13px;
           cursor: pointer;
           transition: all 0.2s ease;
         }
@@ -311,12 +352,12 @@ export default function Sidebar() {
         }
         .sidebar-login-btn {
           width: 100%;
-          padding: 10px 16px;
-          border-radius: 10px;
+          padding: 8px 12px;
+          border-radius: 8px;
           background: linear-gradient(135deg, #a855f7, #f472b6);
           color: #fff;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 13px;
           text-decoration: none;
           text-align: center;
           transition: all 0.2s ease;
@@ -362,7 +403,7 @@ export default function Sidebar() {
         @media (min-width: 1024px) {
           .sidebar {
             transform: translateX(0) !important;
-            width: 260px;
+            width: 220px;
           }
           .sidebar-overlay {
             display: none !important;

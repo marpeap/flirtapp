@@ -74,7 +74,11 @@ export default function OnboardingPage() {
         setLat(prof.lat || null);
         setLng(prof.lng || null);
         setGender(prof.gender || '');
-        setLookingForGender(prof.looking_for_gender || 'any');
+        // Convertir le tableau looking_for_gender en valeur scalaire pour le select
+        const lookingForGenderValue = Array.isArray(prof.looking_for_gender) 
+          ? (prof.looking_for_gender[0] || 'any')
+          : (prof.looking_for_gender || 'any');
+        setLookingForGender(lookingForGenderValue);
         setMainIntent(prof.main_intent || '');
         setBio(prof.bio || '');
 
@@ -98,6 +102,7 @@ export default function OnboardingPage() {
           .insert({
             user_id: user.id,
             main_photo_url: randomAvatar,
+            looking_for_gender: [], // Initialiser avec un tableau vide pour éviter les erreurs
           })
           .select('id')
           .single();
@@ -113,6 +118,49 @@ export default function OnboardingPage() {
     load();
   }, [router]);
 
+  // Fonction pour mapper les valeurs de genre du formulaire vers les valeurs attendues par la base de données
+  function mapGenderToDatabase(genderValue) {
+    if (!genderValue) return null;
+    
+    const genderMap = {
+      'man': 'homme',
+      'woman': 'femme',
+      'non_binary': 'non-binaire',
+      'trans_mtf': 'femme',
+      'trans_ftm': 'homme',
+      'couple': 'autre',
+      'fluid': 'non-binaire',
+      'other': 'autre',
+      // Valeurs déjà correctes (au cas où)
+      'homme': 'homme',
+      'femme': 'femme',
+      'non-binaire': 'non-binaire',
+      'autre': 'autre',
+    };
+    
+    return genderMap[genderValue] || 'autre';
+  }
+
+  // Fonction pour mapper les valeurs de main_intent du formulaire vers les valeurs attendues par la base de données
+  function mapMainIntentToDatabase(mainIntentValue) {
+    if (!mainIntentValue) return null;
+    
+    const mainIntentMap = {
+      'friendly': 'amitié',  // Chats amicaux en ligne
+      'sexy': 'amour',       // Chats coquins en ligne
+      'wild': 'amour',       // Chats intenses en ligne
+      'both': 'les_deux',
+      'other': 'autre',
+      // Valeurs déjà correctes (au cas où)
+      'amour': 'amour',
+      'amitié': 'amitié',
+      'les_deux': 'les_deux',
+      'autre': 'autre',
+    };
+    
+    return mainIntentMap[mainIntentValue] || 'autre';
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!userId) return;
@@ -121,6 +169,25 @@ export default function OnboardingPage() {
     setErrorMsg('');
     setInfoMsg('');
 
+    // Convertir looking_for_gender en tableau si nécessaire
+    // La base de données attend un TEXT[] mais le formulaire envoie une string
+    let lookingForGenderArray = [];
+    if (lookingForGender) {
+      if (Array.isArray(lookingForGender)) {
+        lookingForGenderArray = lookingForGender;
+      } else if (lookingForGender === 'any') {
+        // "any" signifie tous les genres, on peut laisser vide ou mettre tous les genres
+        lookingForGenderArray = [];
+      } else {
+        // Convertir la string en tableau avec un seul élément
+        lookingForGenderArray = [lookingForGender];
+      }
+    }
+
+    // Mapper le genre vers les valeurs attendues par la base de données
+    const mappedGender = mapGenderToDatabase(gender);
+    const mappedMainIntent = mapMainIntentToDatabase(mainIntent);
+    
     const payload = {
       id: profileId || undefined,
       user_id: userId,
@@ -128,9 +195,9 @@ export default function OnboardingPage() {
       city: city || null,
       lat: lat || null,
       lng: lng || null,
-      gender: gender || null,
-      looking_for_gender: lookingForGender || 'any',
-      main_intent: mainIntent || null,
+      gender: mappedGender,
+      looking_for_gender: lookingForGenderArray,
+      main_intent: mappedMainIntent,
       bio: bio || null,
       main_photo_url: mainPhotoUrl || null,
     };

@@ -27,7 +27,16 @@ export default function CityGeolocation({ city, setCity, onLocationUpdate, lat, 
           );
           
           if (!response.ok) {
-            throw new Error('Erreur lors de la récupération de la ville');
+            throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            // #region agent log
+            const text = await response.text();
+            fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CityGeolocation.js:29',message:'Geocoding API non-JSON response',data:{contentType,responseStart:text?.substring(0,200),isHtml:text?.startsWith('<!DOCTYPE')},timestamp:Date.now(),sessionId:'debug-session',runId:'geolocation',hypothesisId:'GEO2'})}).catch(()=>{});
+            // #endregion
+            throw new Error('La réponse de l\'API de géocodage n\'est pas au format JSON');
           }
           
           const data = await response.json();
@@ -43,19 +52,52 @@ export default function CityGeolocation({ city, setCity, onLocationUpdate, lat, 
             onLocationUpdate(latitude, longitude, cityName);
           }
         } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CityGeolocation.js:45',message:'Geocoding error',data:{errorMessage:err?.message,errorName:err?.name,hasError:!!err},timestamp:Date.now(),sessionId:'debug-session',runId:'geolocation',hypothesisId:'GEO1'})}).catch(()=>{});
+          // #endregion
           console.error('Erreur géocodage:', err);
           setErrorMsg('Impossible de déterminer ta ville. Tu peux la saisir manuellement.');
           setLocationStatus('error');
         }
       },
       (error) => {
-        console.error('Erreur géolocalisation:', error);
+        // Extraire les détails de l'erreur de manière sécurisée
+        // L'objet error peut être vide ou avoir des propriétés non énumérables
+        const errorCode = error?.code ?? null;
+        const errorMessage = error?.message || 'Erreur de géolocalisation inconnue';
+        const errorName = error?.name || 'GeolocationPositionError';
+        
+        const errorDetails = {
+          code: errorCode,
+          message: errorMessage,
+          name: errorName,
+          hasError: !!error,
+          errorType: typeof error,
+          errorString: String(error),
+          errorKeys: error && typeof error === 'object' ? Object.keys(error) : [],
+        };
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CityGeolocation.js:63',message:'Geolocation error',data:errorDetails,timestamp:Date.now(),sessionId:'debug-session',runId:'geolocation',hypothesisId:'GEO1'})}).catch(()=>{});
+        // #endregion
+        
+        // Logger avec plus de détails
+        if (errorCode !== null && errorCode !== undefined) {
+          console.error('Erreur géolocalisation:', {
+            code: errorCode,
+            message: errorMessage,
+            name: errorName,
+          });
+        } else {
+          console.error('Erreur géolocalisation (détails manquants):', errorDetails);
+        }
+        
         let message = 'Impossible d\'obtenir ta position.';
-        if (error.code === 1) {
+        if (errorCode === 1) {
           message = 'Permission de géolocalisation refusée. Tu peux saisir ta ville manuellement.';
-        } else if (error.code === 2) {
+        } else if (errorCode === 2) {
           message = 'Position indisponible. Tu peux saisir ta ville manuellement.';
-        } else if (error.code === 3) {
+        } else if (errorCode === 3) {
           message = 'Délai d\'attente dépassé. Tu peux saisir ta ville manuellement.';
         }
         setErrorMsg(message);

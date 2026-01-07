@@ -18,6 +18,7 @@ export default function GroupsPage() {
   const [activeGroups, setActiveGroups] = useState([]);
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
   const [actingId, setActingId] = useState(null);
   const [expandedProposal, setExpandedProposal] = useState(null);
 
@@ -46,121 +47,200 @@ export default function GroupsPage() {
   }, [router]);
 
   async function loadInvites(userId) {
+    // #region agent log
+    const loadStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:48',message:'Loading group invites',data:{userId:userId?.substring(0,8)||null},timestamp:loadStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G1'})}).catch(()=>{});
+    // #endregion
     const { data, error } = await supabase
       .from('group_match_candidates')
       .select(`
         id,
         status,
+        proposal_id,
         proposal:group_match_proposals!inner (
-          id, title, created_at, creator_user_id, max_size, status, conversation_id,
-          creator:profiles!group_match_proposals_creator_user_id_fkey (
-            user_id, display_name, main_photo_url, city
-          ),
-          members:group_match_candidates (
-            id, user_id, status,
-            profile:profiles!group_match_candidates_user_id_fkey (
-              user_id, display_name, main_photo_url
-            )
-          )
+          id, title, created_at, creator_user_id, max_size, status, conversation_id
         )
       `)
       .eq('user_id', userId)
       .in('status', ['invited', 'pending', 'accepted']);
 
+    // #region agent log
+    const loadEndTime = Date.now();
     if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:70',message:'Error loading group invites',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G1'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:70',message:'Group invites loaded successfully',data:{inviteCount:data?.length||0,rawDataCount:data?.length||0,duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G1'})}).catch(()=>{});
+    }
+    // #endregion
+    if (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:70',message:'Error loading group invites - console.error',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,errorHint:error.hint||null,hasError:!!error},timestamp:Date.now(),sessionId:'debug-session',runId:'groups',hypothesisId:'G1'})}).catch(()=>{});
+      // #endregion
       console.error('Erreur invitations:', error);
-      setErrorMsg(error.message || 'Erreur chargement invitations.');
+      const errorMessage = error.message || error.code || 'Erreur chargement invitations.';
+      setErrorMsg(errorMessage);
       return [];
     }
 
-    return (data || [])
-      .filter((cand) => cand.proposal && cand.proposal.creator_user_id !== userId && cand.proposal.status !== 'cancelled')
-      .map((cand) => {
-        const proposal = cand.proposal;
-        const others = (proposal?.members || []).filter((m) => m.user_id !== userId);
-        return {
-          kind: 'invitation',
-          role: 'invitee',
-          id: cand.id,
-          status: cand.status,
-          proposal: {
-            id: proposal?.id,
-            title: proposal?.title,
-            created_at: proposal?.created_at,
-            creator_user_id: proposal?.creator_user_id,
-            max_size: proposal?.max_size,
-            status: proposal?.status,
-            conversation_id: proposal?.conversation_id,
-          },
-          creator: {
-            display_name: proposal?.creator?.display_name,
-            main_photo_url: proposal?.creator?.main_photo_url,
-            city: proposal?.creator?.city,
-          },
-          otherMembers: others.map((m) => ({
-            id: m.id,
-            user_id: m.user_id,
-            status: m.status,
-            display_name: m.profile?.display_name || 'Anonyme',
-            main_photo_url: m.profile?.main_photo_url || null,
-          })),
-          acceptedCount: others.filter((m) => m.status === 'accepted').length + 1, // + créateur
-          pendingCount: others.filter((m) => m.status === 'invited').length,
-        };
-      });
+    // Enrichir avec les profils du créateur et des membres
+    const enrichedData = await Promise.all(
+      (data || [])
+        .filter((cand) => cand.proposal && cand.proposal.creator_user_id !== userId && cand.proposal.status !== 'cancelled')
+        .map(async (cand) => {
+          const proposal = cand.proposal;
+          
+          // Récupérer tous les membres de cette proposition
+          const { data: allMembers } = await supabase
+            .from('group_match_candidates')
+            .select('id, user_id, status')
+            .eq('proposal_id', proposal.id);
+          
+          const others = (allMembers || []).filter((m) => m.user_id !== userId);
+          
+          // Récupérer le profil du créateur
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, main_photo_url, city')
+            .eq('user_id', proposal.creator_user_id)
+            .maybeSingle();
+          
+          // Récupérer les profils des autres membres
+          const otherUserIds = others.map(m => m.user_id);
+          let memberProfiles = [];
+          if (otherUserIds.length > 0) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('user_id, display_name, main_photo_url')
+              .in('user_id', otherUserIds);
+            memberProfiles = data || [];
+          }
+          
+          const profilesMap = new Map((memberProfiles || []).map(p => [p.user_id, p]));
+          
+          return {
+            kind: 'invitation',
+            role: 'invitee',
+            id: cand.id,
+            status: cand.status,
+            proposal: {
+              id: proposal?.id,
+              title: proposal?.title,
+              created_at: proposal?.created_at,
+              creator_user_id: proposal?.creator_user_id,
+              max_size: proposal?.max_size,
+              status: proposal?.status,
+              conversation_id: proposal?.conversation_id,
+            },
+            creator: {
+              display_name: creatorProfile?.display_name || 'Anonyme',
+              main_photo_url: creatorProfile?.main_photo_url || null,
+              city: creatorProfile?.city || null,
+            },
+            otherMembers: others.map((m) => {
+              const profile = profilesMap.get(m.user_id);
+              return {
+                id: m.id,
+                user_id: m.user_id,
+                status: m.status,
+                display_name: profile?.display_name || 'Anonyme',
+                main_photo_url: profile?.main_photo_url || null,
+              };
+            }),
+            acceptedCount: others.filter((m) => m.status === 'accepted').length + 1, // + créateur
+            pendingCount: others.filter((m) => m.status === 'invited').length,
+          };
+        })
+    );
+    
+    return enrichedData;
   }
 
   async function loadMyProposals(userId) {
+    // #region agent log
+    const loadStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:113',message:'Loading my group proposals',data:{userId:userId?.substring(0,8)||null},timestamp:loadStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G2'})}).catch(()=>{});
+    // #endregion
     const { data, error } = await supabase
       .from('group_match_proposals')
       .select(`
         id, title, created_at, creator_user_id, max_size, status, conversation_id,
-        members:group_match_candidates (
-          id, user_id, status,
-          profile:profiles!group_match_candidates_user_id_fkey (
-            user_id, display_name, main_photo_url
-          )
+        members:group_match_candidates!group_match_candidates_proposal_id_fkey (
+          id, user_id, status
         )
       `)
       .eq('creator_user_id', userId)
       .neq('status', 'cancelled')
       .order('created_at', { ascending: false });
 
+    // #region agent log
+    const loadEndTime = Date.now();
     if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:129',message:'Error loading my proposals',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G2'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:129',message:'My proposals loaded successfully',data:{proposalCount:data?.length||0,duration:loadEndTime-loadStartTime},timestamp:loadEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G2'})}).catch(()=>{});
+    }
+    // #endregion
+    if (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:129',message:'Error loading my proposals - console.error',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,errorHint:error.hint||null,hasError:!!error},timestamp:Date.now(),sessionId:'debug-session',runId:'groups',hypothesisId:'G2'})}).catch(()=>{});
+      // #endregion
       console.error('Erreur propositions:', error);
-      setErrorMsg(error.message || 'Erreur chargement de mes propositions.');
+      const errorMessage = error.message || error.code || 'Erreur chargement de mes propositions.';
+      setErrorMsg(errorMessage);
       return [];
     }
 
-    return (data || []).map((p) => {
-      const members = (p.members || []).filter((m) => m.user_id !== userId);
-      return {
-        kind: 'proposal',
-        role: 'creator',
-        id: p.id,
-        status: p.status,
-        proposal: {
+    // Enrichir avec les profils des membres
+    const enrichedProposals = await Promise.all(
+      (data || []).map(async (p) => {
+        const members = (p.members || []).filter((m) => m.user_id !== userId);
+        const memberUserIds = members.map(m => m.user_id);
+        
+        // Récupérer les profils des membres
+        let memberProfiles = [];
+        if (memberUserIds.length > 0) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, main_photo_url')
+            .in('user_id', memberUserIds);
+          memberProfiles = data || [];
+        }
+        
+        const profilesMap = new Map((memberProfiles || []).map(prof => [prof.user_id, prof]));
+        
+        return {
+          kind: 'proposal',
+          role: 'creator',
           id: p.id,
-          title: p.title,
-          created_at: p.created_at,
-          creator_user_id: p.creator_user_id,
-          max_size: p.max_size,
           status: p.status,
-          conversation_id: p.conversation_id,
-        },
-        creator: null,
-        members: members.map((m) => ({
-          id: m.id,
-          user_id: m.user_id,
-          status: m.status,
-          display_name: m.profile?.display_name || 'Anonyme',
-          main_photo_url: m.profile?.main_photo_url || null,
-        })),
-        acceptedCount: members.filter((m) => m.status === 'accepted').length,
-        pendingCount: members.filter((m) => m.status === 'invited').length,
-        declinedCount: members.filter((m) => m.status === 'declined').length,
-      };
-    });
+          proposal: {
+            id: p.id,
+            title: p.title,
+            created_at: p.created_at,
+            creator_user_id: p.creator_user_id,
+            max_size: p.max_size,
+            status: p.status,
+            conversation_id: p.conversation_id,
+          },
+          creator: null,
+          members: members.map((m) => {
+            const profile = profilesMap.get(m.user_id);
+            return {
+              id: m.id,
+              user_id: m.user_id,
+              status: m.status,
+              display_name: profile?.display_name || 'Anonyme',
+              main_photo_url: profile?.main_photo_url || null,
+            };
+          }),
+          acceptedCount: members.filter((m) => m.status === 'accepted').length,
+          pendingCount: members.filter((m) => m.status === 'invited').length,
+          declinedCount: members.filter((m) => m.status === 'declined').length,
+        };
+      })
+    );
+    
+    return enrichedProposals;
   }
 
   async function refreshGroups(userId) {
@@ -226,14 +306,27 @@ export default function GroupsPage() {
 
   async function handleAcceptInvite(invite) {
     if (!currentUserId) return;
+    // #region agent log
+    const acceptStartTime = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:227',message:'Accepting group invite',data:{inviteId:invite.id,proposalId:invite.proposal?.id,userId:currentUserId?.substring(0,8)||null},timestamp:acceptStartTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G3'})}).catch(()=>{});
+    // #endregion
     setActingId(invite.id);
     setErrorMsg('');
+    setInfoMsg('');
 
     const { data, error } = await supabase.rpc('accept_group_match', {
       p_proposal_id: invite.proposal.id,
       p_user_id: currentUserId,
     });
 
+    // #region agent log
+    const acceptEndTime = Date.now();
+    if (error) {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:237',message:'Error accepting group invite',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details||null,proposalId:invite.proposal?.id,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G3'})}).catch(()=>{});
+    } else {
+      fetch('http://127.0.0.1:7244/ingest/b52ac800-6cee-4c21-a14d-e8a882350bc6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groups/page.js:237',message:'Group invite accepted successfully',data:{proposalId:invite.proposal?.id,conversationId:data||null,hasConversation:!!data,duration:acceptEndTime-acceptStartTime},timestamp:acceptEndTime,sessionId:'debug-session',runId:'groups',hypothesisId:'G3'})}).catch(()=>{});
+    }
+    // #endregion
     setActingId(null);
 
     if (error) {
@@ -241,12 +334,23 @@ export default function GroupsPage() {
       return;
     }
 
+    // Rafraîchir les données après acceptation
     await refreshGroups(currentUserId);
     await loadActiveGroups(currentUserId);
 
-    // Rediriger vers la conversation si elle existe
+    // Afficher un message de succès
     if (data) {
-      router.push(`/messages/${data}`);
+      setInfoMsg('Invitation acceptée ! Redirection vers la conversation...');
+      // Attendre un peu pour que l'UI se mette à jour avant la redirection
+      setTimeout(() => {
+        router.push(`/messages/${data}`);
+      }, 1000);
+    } else {
+      setInfoMsg('Invitation acceptée ! Vous serez ajouté au groupe une fois que tous les membres auront accepté.');
+      // Effacer le message après 5 secondes
+      setTimeout(() => {
+        setInfoMsg('');
+      }, 5000);
     }
   }
 
@@ -348,6 +452,12 @@ export default function GroupsPage() {
 
   const hasGroupItems = groupItems.length > 0;
   const hasActiveGroups = activeGroups.length > 0;
+  
+  // Séparer les invitations et propositions depuis groupItems
+  const invites = groupItems.filter(item => item.kind === 'invitation');
+  const myProposals = groupItems.filter(item => item.kind === 'proposal');
+  const hasInvites = invites.length > 0;
+  const hasProposals = myProposals.length > 0;
 
   return (
     <main>
@@ -406,6 +516,19 @@ export default function GroupsPage() {
           {errorMsg}
         </div>
       )}
+      {infoMsg && (
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: '12px',
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          color: '#6ee7b7',
+          marginBottom: 20,
+          fontSize: 14,
+        }}>
+          {infoMsg}
+        </div>
+      )}
 
       {/* Section Invitations reçues */}
       <section style={{ marginBottom: 32 }}>
@@ -432,7 +555,7 @@ export default function GroupsPage() {
           )}
         </div>
 
-        {invitesLoading ? (
+        {groupItemsLoading ? (
           <p style={{ color: '#9ca3af', fontSize: 14 }}>Chargement…</p>
         ) : !hasInvites ? (
           <div className="card" style={{ 
@@ -667,7 +790,7 @@ export default function GroupsPage() {
           )}
         </div>
 
-        {proposalsLoading ? (
+        {groupItemsLoading ? (
           <p style={{ color: '#9ca3af', fontSize: 14 }}>Chargement…</p>
         ) : !hasProposals ? (
           <div className="card" style={{ 
